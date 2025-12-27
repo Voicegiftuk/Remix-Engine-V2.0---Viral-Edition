@@ -1,48 +1,36 @@
 # ============================================
-# REMIX ENGINE v2.0 - VIRAL EDITION
+# REMIX ENGINE V2.0 - DEPENDENCIES
+# Safe Mode Only (No Instagram/TikTok auto-posting)
 # ============================================
 
-# Video processing
+# Core Video Processing
 moviepy==1.0.3
-imageio==2.34.0
+pillow>=10.0.0
+numpy>=1.24.0
+imageio==2.31.1
 imageio-ffmpeg==0.4.9
 
-# Image processing
-Pillow==10.2.0
+# AI Content Generation
+google-generativeai>=0.3.0
 
-# AI & Content Generation
-google-generativeai==0.3.2
+# V2.0 Features
+html2image==2.0.4.3          # Pro overlays
+edge-tts==6.1.9              # Free voiceovers
+scikit-image>=0.22.0         # Hash breaking (image processing)
 
-# Social Media Publishing
-instagrapi==2.0.0
-selenium==4.16.0
-webdriver-manager==4.0.1
-python-telegram-bot==20.7
+# Telegram (Safe Distribution)
+python-telegram-bot>=20.0    # Telegram bot for safe delivery
 
-# Configuration & Environment
-pydantic==2.5.3
-pydantic-settings==2.1.0
-python-dotenv==1.0.0
-
-# Logging
-loguru==0.7.2
+# Configuration & Settings
+pydantic>=2.0.0              # Settings v2
+pydantic-settings>=2.0.0     # Settings management
+python-dotenv>=1.0.0         # .env file support
 
 # Utilities
-requests==2.31.0
-aiohttp==3.9.1
+loguru>=0.7.0                # Logging
+requests>=2.31.0             # HTTP requests
+beautifulsoup4>=4.12.0       # HTML parsing (for overlays)
 
-# ============================================
-# V2.0 VIRAL UPGRADES (NEW)
-# ============================================
-
-# Pro Visual Overlays (HTML/CSS → PNG)
-html2image==2.0.4.3
-
-# Viral TikTok Voice (Free Unlimited)
-edge-tts==6.1.9
-
-# Advanced Video Effects
-numpy>=1.24.0
-
-# Color Science (for hash breaking)
-scikit-image>=0.22.0
+# Optional: Image Generation (if you want to generate images too)
+# openai>=1.0.0              # DALL-E (requires API key)
+# stability-sdk>=0.8.0       # Stable Diffusion (requires API key)
