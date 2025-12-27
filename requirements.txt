@@ -1,0 +1,48 @@
+# ============================================
+# REMIX ENGINE v2.0 - VIRAL EDITION
+# ============================================
+
+# Video processing
+moviepy==1.0.3
+imageio==2.34.0
+imageio-ffmpeg==0.4.9
+
+# Image processing
+Pillow==10.2.0
+
+# AI & Content Generation
+google-generativeai==0.3.2
+
+# Social Media Publishing
+instagrapi==2.0.0
+selenium==4.16.0
+webdriver-manager==4.0.1
+python-telegram-bot==20.7
+
+# Configuration & Environment
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# Logging
+loguru==0.7.2
+
+# Utilities
+requests==2.31.0
+aiohttp==3.9.1
+
+# ============================================
+# V2.0 VIRAL UPGRADES (NEW)
+# ============================================
+
+# Pro Visual Overlays (HTML/CSS → PNG)
+html2image==2.0.4.3
+
+# Viral TikTok Voice (Free Unlimited)
+edge-tts==6.1.9
+
+# Advanced Video Effects
+numpy>=1.24.0
+
+# Color Science (for hash breaking)
+scikit-image>=0.22.0

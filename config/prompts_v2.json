@@ -1,0 +1,154 @@
+{
+  "hook_generation": {
+    "system": "You are a viral TikTok/Instagram content creator. Generate attention-grabbing hooks that stop the scroll. Be dramatic, urgent, and emotional. Use emojis strategically.",
+    "templates": [
+      "Generate a 5-8 word hook for a video about {occasion} voice message gifts. Make it urgent and emotional. Use emojis.",
+      "Create a viral TikTok hook (max 8 words) about personalized NFC voice gifts for {occasion}. Be dramatic and create FOMO.",
+      "Write a scroll-stopping hook (under 8 words) for {occasion} gift content that creates urgency."
+    ]
+  },
+  
+  "voiceover_script": {
+    "system": "You are writing voiceover scripts for short-form video. Keep sentences short, clear, and punchy. Use conversational tone. Easy to read aloud.",
+    "templates": [
+      "Write a 15-second voiceover script about {occasion} voice message gifts. 2-3 short sentences. Conversational and emotional.",
+      "Create a TikTok voiceover (15 seconds) explaining how NFC voice gifts work for {occasion}. Simple, clear, and relatable.",
+      "Write narrator text for {occasion} gift video. Keep it under 40 words. Create emotional connection without being cheesy."
+    ]
+  },
+  
+  "caption": {
+    "system": "You are a social media copywriter. Write engaging, authentic captions that feel human. Create connection, not sales pitch.",
+    "templates": [
+      "Write an Instagram caption (150 chars) about personalized voice message gifts for {occasion}. Include emotional hook and CTA.",
+      "Create a TikTok caption for {occasion} NFC voice gift. Relatable, emotional, under 150 characters. Add a question to boost engagement.",
+      "Write caption for {occasion} voice gift video. Make it personal and shareable. Create FOMO but stay authentic."
+    ]
+  },
+  
+  "hashtags": {
+    "system": "You are a hashtag researcher. Provide trending, relevant hashtags that balance reach and engagement.",
+    "base": [
+      "#NFC",
+      "#VoiceMessage",
+      "#PersonalizedGift",
+      "#GiftIdeas",
+      "#ThoughtfulGift",
+      "#UniqueGift"
+    ],
+    "occasions": {
+      "birthday": [
+        "#BirthdayGift",
+        "#BirthdaySurprise",
+        "#BdayGift",
+        "#BirthdayIdeas",
+        "#BirthdayPresent"
+      ],
+      "wedding": [
+        "#WeddingGift",
+        "#BridalGift",
+        "#WeddingIdeas",
+        "#BrideAndGroom",
+        "#WeddingInspiration"
+      ],
+      "anniversary": [
+        "#AnniversaryGift",
+        "#LoveGift",
+        "#Anniversary",
+        "#CoupleGoals",
+        "#RelationshipGoals"
+      ],
+      "mothers_day": [
+        "#MothersDay",
+        "#MomGift",
+        "#GiftForMom",
+        "#MothersDayGift",
+        "#BestMomEver"
+      ],
+      "fathers_day": [
+        "#FathersDay",
+        "#DadGift",
+        "#GiftForDad",
+        "#FathersDayGift",
+        "#BestDadEver"
+      ],
+      "christmas": [
+        "#ChristmasGift",
+        "#XmasGift",
+        "#HolidayGift",
+        "#ChristmasIdeas",
+        "#SecretSanta"
+      ],
+      "valentines": [
+        "#ValentinesDay",
+        "#ValentineGift",
+        "#LoveGift",
+        "#ValentinesIdeas",
+        "#RomanticGift"
+      ],
+      "general": [
+        "#GiftInspiration",
+        "#GiftOfTheDay",
+        "#InstaGood",
+        "#ShopSmall",
+        "#SupportLocal"
+      ]
+    }
+  },
+  
+  "cta": {
+    "templates": [
+      "Get Yours at SayPlay.co.uk",
+      "Shop Now - SayPlay.co.uk",
+      "Visit SayPlay.co.uk",
+      "Tap Link in Bio!",
+      "Available at SayPlay.co.uk",
+      "Order at SayPlay.co.uk",
+      "Link in Bio - SayPlay.co.uk",
+      "SayPlay.co.uk - Make Memories"
+    ]
+  },
+  
+  "occasions_context": {
+    "birthday": {
+      "keywords": ["birthday", "celebrate", "special day", "getting older", "surprise"],
+      "emotions": ["excitement", "joy", "nostalgia", "celebration"],
+      "angle": "Make their birthday unforgettable with a voice message they'll treasure forever"
+    },
+    "wedding": {
+      "keywords": ["wedding", "marriage", "bride", "groom", "forever", "love"],
+      "emotions": ["love", "commitment", "joy", "romance"],
+      "angle": "The perfect wedding gift - your heartfelt message for their special day"
+    },
+    "anniversary": {
+      "keywords": ["anniversary", "years together", "memories", "love", "relationship"],
+      "emotions": ["love", "nostalgia", "commitment", "appreciation"],
+      "angle": "Celebrate your love story with a voice message that lasts forever"
+    },
+    "mothers_day": {
+      "keywords": ["mom", "mother", "appreciation", "love", "gratitude"],
+      "emotions": ["love", "gratitude", "appreciation", "warmth"],
+      "angle": "Tell mom how much she means with a voice message she can keep forever"
+    },
+    "fathers_day": {
+      "keywords": ["dad", "father", "hero", "appreciation", "gratitude"],
+      "emotions": ["love", "respect", "gratitude", "pride"],
+      "angle": "Give dad a gift he'll actually use - your voice message"
+    },
+    "christmas": {
+      "keywords": ["christmas", "holiday", "festive", "santa", "present"],
+      "emotions": ["joy", "warmth", "giving", "celebration"],
+      "angle": "The most personal Christmas gift - a voice message under the tree"
+    },
+    "valentines": {
+      "keywords": ["valentine", "love", "romance", "sweetheart", "heart"],
+      "emotions": ["love", "romance", "affection", "passion"],
+      "angle": "Say 'I love you' in a way they'll never forget"
+    },
+    "general": {
+      "keywords": ["gift", "present", "thoughtful", "personal", "memorable"],
+      "emotions": ["thoughtfulness", "connection", "appreciation", "joy"],
+      "angle": "Turn any gift into a memory with a personal voice message"
+    }
+  }
+}
