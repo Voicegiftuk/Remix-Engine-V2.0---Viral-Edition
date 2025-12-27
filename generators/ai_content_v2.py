@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 import random
 import json
+import os
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -38,7 +39,7 @@ class AIContentGeneratorV2:
     - Hooks optimized for voiceover (max 8 words)
     - Voice-friendly phrasing
     - Platform-specific optimization
-    - Occasion-aware content
+    - Occasion-aware generation
     """
     
     def __init__(self, api_key: str):
@@ -49,7 +50,9 @@ class AIContentGeneratorV2:
             api_key: Google Gemini API key
         """
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        
+        # FIXED: Updated to 'gemini-1.5-flash' to resolve 404/Deprecation errors
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Load prompts
         self.base_dir = Path(__file__).parent.parent
