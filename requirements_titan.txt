@@ -1,0 +1,125 @@
+# ============================================
+# PROJECT TITAN - DEPENDENCIES
+# Complete Marketing Automation System
+# ============================================
+
+# ============================================
+# CORE VIDEO (From Remix V2.0)
+# ============================================
+
+# Video Processing
+moviepy==1.0.3
+pillow>=10.0.0
+numpy>=1.24.0
+imageio==2.31.1
+imageio-ffmpeg==0.4.9
+
+# AI Content Generation
+google-generativeai>=0.3.0
+
+# V2.0 Features (Video Module)
+html2image==2.0.4.3          # Pro overlays
+edge-tts==6.1.9              # Free voiceovers
+scikit-image>=0.22.0         # Hash breaking (image processing)
+
+# Telegram (Safe Distribution)
+python-telegram-bot>=20.0    # Telegram bot for safe delivery
+
+# Configuration & Settings
+pydantic>=2.0.0              # Settings v2
+pydantic-settings>=2.0.0     # Settings management
+python-dotenv>=1.0.0         # .env file support
+
+# Utilities
+loguru>=0.7.0                # Logging
+requests>=2.31.0             # HTTP requests
+beautifulsoup4>=4.12.0       # HTML parsing
+
+# ============================================
+# TITAN EXPANSION - NEW MODULES
+# ============================================
+
+# Blog Engine (SEO Articles)
+markdown>=3.5.0              # Markdown to HTML conversion
+lxml>=5.0.0                  # HTML/XML parsing
+python-slugify>=8.0.0        # URL-friendly slugs
+readability-lxml>=0.8.1      # Readability scoring
+
+# Image Engine (AI Image Generation)
+# Flux (local) OR DALL-E (API) - choose one:
+# torch>=2.0.0               # For local Flux model (heavy!)
+# openai>=1.0.0              # For DALL-E API (lighter, paid)
+
+# Distribution Engine
+python-wordpress-xmlrpc>=2.3  # WordPress API
+pinterest-api>=0.3.0          # Pinterest integration
+
+# SEO Tools
+serpapi>=1.0.0               # Google Search API (competitor analysis)
+# Alternative free option:
+googlesearch-python>=1.2.3   # Free Google search (rate limited)
+
+# Analytics
+pandas>=2.0.0                # Data analysis
+matplotlib>=3.8.0            # Charts/graphs
+
+# Testing
+pytest>=7.4.0                # Unit tests
+pytest-asyncio>=0.21.0       # Async test support
+
+# ============================================
+# SYSTEM DEPENDENCIES (Install via apt/brew)
+# ============================================
+
+# Required system packages:
+# Ubuntu/Debian:
+#   sudo apt-get install -y ffmpeg imagemagick chromium-browser
+#
+# MacOS:
+#   brew install ffmpeg imagemagick chromium
+#
+# Windows:
+#   Download and install:
+#   - FFmpeg: https://ffmpeg.org/download.html
+#   - ImageMagick: https://imagemagick.org/script/download.php
+#   - Chrome/Chromium
+
+# ============================================
+# OPTIONAL - ADVANCED FEATURES
+# ============================================
+
+# AI Image Generation (Heavy - only if local)
+# diffusers>=0.25.0          # Stable Diffusion
+# transformers>=4.36.0       # Hugging Face models
+# accelerate>=0.25.0         # GPU acceleration
+
+# Advanced NLP
+# spacy>=3.7.0               # Advanced text processing
+# textstat>=0.7.3            # Readability metrics
+
+# Email Marketing
+# sendgrid>=6.11.0           # Email sending (if not using SMTP)
+
+# ============================================
+# NOTES
+# ============================================
+
+# Lightweight Setup (Recommended to start):
+# - Uses Gemini for AI (free)
+# - Uses Edge-TTS for voice (free)
+# - Uses DALL-E for images (paid but cheap)
+# - No heavy ML models locally
+# Total: ~500MB dependencies
+
+# Full Setup (Maximum features):
+# - Includes local Flux for images (free but heavy)
+# - Includes Stable Diffusion (free but very heavy)
+# - Total: ~15GB dependencies
+
+# For production (VPS/Cloud):
+# - Use lightweight setup
+# - Consider GPU instance for image generation
+# - Estimated cost: $10-20/month
+
+# Installation:
+# pip install -r requirements_titan.txt --break-system-packages
