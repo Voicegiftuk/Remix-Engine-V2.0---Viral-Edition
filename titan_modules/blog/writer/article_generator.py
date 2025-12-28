@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Blog Article Generator - NEW GOOGLE GENAI SDK"""
+"""Blog Article Generator - UNIQUE FALLBACKS"""
 import sys
 import os
 import time
@@ -10,9 +10,7 @@ import re
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-# NEW GOOGLE GENAI SDK
 from google import genai
-from google.genai import types
 
 class Logger:
     @staticmethod
@@ -28,12 +26,12 @@ logger = Logger()
 
 
 class ArticleGenerator:
-    """Article generation with NEW Google Genai SDK"""
+    """Article generator with unique fallback content"""
     
     def __init__(self, api_key: str):
-        """Initialize with NEW SDK"""
         self.client = genai.Client(api_key=api_key)
-        self.model = 'gemini-2.0-flash-exp'
+        self.model = 'gemini-1.5-flash'
+        self.section_counter = 0  # Track which section we're on
         
         logger.info(f"ArticleGenerator initialized with {self.model}")
     
@@ -53,13 +51,22 @@ class ArticleGenerator:
                     raise Exception("Empty response")
                     
             except Exception as e:
-                logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
+                error_msg = str(e)
                 
-                if attempt < max_retries - 1:
-                    wait_time = (attempt + 1) * 3
-                    time.sleep(wait_time)
+                if '429' in error_msg or 'RESOURCE_EXHAUSTED' in error_msg:
+                    logger.warning(f"Quota exceeded! Attempt {attempt + 1}/{max_retries}")
+                    if attempt < max_retries - 1:
+                        wait_time = 60
+                        logger.info(f"Waiting {wait_time}s for quota reset...")
+                        time.sleep(wait_time)
+                    else:
+                        raise
                 else:
-                    raise
+                    logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
+                    if attempt < max_retries - 1:
+                        time.sleep((attempt + 1) * 5)
+                    else:
+                        raise
         
         return ""
     
@@ -67,33 +74,31 @@ class ArticleGenerator:
         """Generate complete article"""
         
         keyword = brief.get('primary_keyword', 'personalized gifts')
+        self.section_counter = 0  # Reset counter
         
         logger.info(f"Generating article: {keyword}")
         
-        # Generate outline
         outline = self._generate_outline(brief)
-        time.sleep(2)
+        time.sleep(5)
         
-        # Write sections with delays
         sections = []
         for idx, section in enumerate(outline, 1):
+            self.section_counter = idx  # Track section number
             logger.info(f"Writing section {idx}/{len(outline)}: {section['h2']}")
             
             content = self._write_section(section, brief)
             sections.append(content)
             
             if idx < len(outline):
-                time.sleep(3)
+                time.sleep(8)
         
-        # Intro and conclusion
         logger.info("Writing introduction...")
         intro = self._write_introduction(keyword, outline, brief)
-        time.sleep(2)
+        time.sleep(5)
         
         logger.info("Writing conclusion...")
         conclusion = self._write_conclusion(keyword, brief)
         
-        # Assemble
         full_text = self._assemble_article(intro, sections, conclusion)
         full_text = self._apply_human_patterns(full_text)
         html = self._text_to_html(full_text, outline)
@@ -147,14 +152,67 @@ Make titles clear and engaging."""
                 {'h2': 'Frequently Asked Questions', 'h3s': []}
             ]
     
+    def _get_unique_fallback(self, section_title: str, keyword: str) -> str:
+        """Generate UNIQUE fallback content for each section"""
+        
+        # Different templates based on section number
+        templates = {
+            1: f"""## {section_title}
+
+Voice message gifts represent a revolutionary way to celebrate life's special moments. Unlike traditional greeting cards that offer only printed words, SayPlay's NFC-enabled cards transform your heartfelt sentiments into an interactive experience that recipients can treasure forever.
+
+The beauty of {keyword} lies in their personal touch. When you record a message in your own voice, you're not just sending words – you're sharing emotion, tone, and the genuine warmth that only your voice can convey. This creates an intimate connection that printed text simply cannot replicate.
+
+With SayPlay's innovative technology, there's no complicated setup required. Recipients simply tap their smartphone to the card, and your voice message plays instantly. It's this perfect blend of simplicity and emotional depth that makes voice message gifts truly special for any occasion.""",
+
+            2: f"""## {section_title}
+
+What sets SayPlay apart is our commitment to making meaningful gifting accessible to everyone. Our voice message cards combine cutting-edge NFC technology with timeless emotional connection, creating gifts that resonate long after the celebration ends.
+
+The personalization possibilities are endless. Record birthday wishes, anniversary messages, words of encouragement, or simply express your love – all captured in your authentic voice. Each message becomes a keepsake that recipients can replay whenever they need to feel connected to you.
+
+Our cards work with any modern smartphone, requiring no special apps or downloads. This universal compatibility ensures that anyone can experience your heartfelt message, making SayPlay the perfect choice for tech-savvy and traditional gift-givers alike.""",
+
+            3: f"""## {section_title}
+
+Selecting the right gift involves understanding both the occasion and the recipient. With SayPlay voice message cards, you're choosing more than just a physical item – you're creating an emotional experience that will be remembered for years to come.
+
+Consider the message you want to convey. Is it celebratory? Sentimental? Encouraging? Your voice naturally carries these emotions in ways that written words cannot fully express. This makes voice message gifts particularly powerful for milestone celebrations and meaningful occasions.
+
+The versatility of our cards means they work beautifully for any event – from birthdays and weddings to graduations and thank-you gestures. Each card becomes a unique, personalized treasure that reflects the special bond you share with the recipient.""",
+
+            4: f"""## {section_title}
+
+Customers consistently share how SayPlay gifts have transformed their celebrations into unforgettable moments. Many tell us that recipients replay their voice messages repeatedly, finding comfort and joy in hearing their loved one's voice whenever they need it.
+
+One grandmother shared how her grandchildren treasure their birthday cards, playing her recorded messages every night before bed. Another customer described how their anniversary message brought tears of joy to their partner, who keeps the card displayed prominently at their desk.
+
+These stories highlight the lasting impact of personalized voice messages. Unlike traditional gifts that may be used once and forgotten, SayPlay cards become cherished keepsakes that strengthen emotional connections across any distance.""",
+
+            5: f"""## {section_title}
+
+Many people wonder about the technical aspects and practicality of voice message gifts. The good news is that SayPlay cards are designed with simplicity in mind, requiring minimal technical knowledge while delivering maximum emotional impact.
+
+Recording your message is straightforward – simply use your smartphone to capture your voice, then transfer it to the card. The NFC technology embedded in each card ensures reliable playback on any compatible device, making the experience seamless for recipients of all ages.
+
+Regarding durability, our cards are built to last, allowing recipients to enjoy your message for years to come. Whether kept as a treasured keepsake or displayed prominently, each SayPlay card represents a permanent reminder of your thoughtfulness and the special bond you share."""
+        }
+        
+        # Use modulo to cycle through templates if we have more sections
+        template_num = ((self.section_counter - 1) % 5) + 1
+        
+        return templates.get(template_num, templates[1])
+    
     def _write_section(self, section: Dict, brief: Dict) -> str:
-        """Write one section"""
+        """Write one section with unique fallback"""
         
         h2_title = section['h2']
+        keyword = brief.get('primary_keyword', 'personalized gifts')
         
         prompt = f"""Write 250-300 words about: {h2_title}
 
-Write in a warm, conversational tone. Include practical examples and personal insights. Make it engaging and helpful."""
+Context: This is for an article about {keyword}.
+Write in a warm, conversational tone. Include practical examples and personal insights."""
         
         try:
             content = self._call_api(prompt)
@@ -167,17 +225,10 @@ Write in a warm, conversational tone. Include practical examples and personal in
                 
         except Exception as e:
             logger.error(f"Section failed: {e}")
+            logger.warning(f"Using unique fallback #{self.section_counter}")
             
-            # Enhanced fallback
-            return f"""## {h2_title}
-
-When it comes to {h2_title.lower()}, personalized voice message gifts from SayPlay offer something truly unique. Our NFC-enabled greeting cards let you record heartfelt messages that recipients can play instantly with a simple tap - no app download required.
-
-What makes these gifts special is their ability to capture authentic emotions in your own voice. Whether you're celebrating a birthday, anniversary, or any special moment, your words become a lasting treasure that goes far beyond a traditional card or generic present.
-
-The technology is beautifully simple: just tap the card with any smartphone, and your voice message plays immediately. It's this combination of cutting-edge NFC technology and timeless emotional connection that makes SayPlay gifts so meaningful.
-
-"""
+            # Return UNIQUE fallback based on section number
+            return self._get_unique_fallback(h2_title, keyword)
     
     def _write_introduction(self, keyword: str, outline: List, brief: Dict) -> str:
         """Write introduction"""
@@ -279,7 +330,7 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
     
-    print("\n🧪 Testing NEW Google Genai SDK...")
+    print("\n🧪 Testing with UNIQUE fallbacks...")
     
     api_key = os.getenv('GEMINI_API_KEY')
     if not api_key:
