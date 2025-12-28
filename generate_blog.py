@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate blog article - PROFESSIONAL DESIGN"""
+"""Generate blog article - WITH SVG LOGO FALLBACK"""
 import os
 import sys
 import json
@@ -13,11 +13,9 @@ api_key = os.environ.get('GEMINI_API_KEY')
 
 if not api_key:
     print("❌ ERROR: GEMINI_API_KEY not found!")
-    print("Available env vars:", [k for k in os.environ.keys() if 'GEMINI' in k or 'GOOGLE' in k])
     sys.exit(1)
 
 print(f"✅ API Key loaded: {len(api_key)} chars")
-print(f"   Using NEW Google Genai SDK")
 
 from titan_modules.blog.intelligence.topic_generator import TopicGenerator
 from titan_modules.blog.writer.article_generator import ArticleGenerator
@@ -29,36 +27,43 @@ brief = topic_gen.generate_next_topic()
 
 print(f'✓ Topic: {brief["primary_keyword"]}')
 print(f'✓ Category: {brief["category"]}')
-print(f'✓ Trending: {brief["trending_score"]}/100')
 
 # Generate article
-print('\n✍️  Writing article with NEW Google Genai SDK...')
+print('\n✍️  Writing article...')
 article_gen = ArticleGenerator(api_key)
 article = article_gen.write_article(brief)
 
 print(f'\n✅ Article complete!')
 print(f'   Words: {article["word_count"]}')
-print(f'   Sections: {len(article["outline"])}')
 
-# Load logo as base64
-logo_base64 = ""
+# Load logo - PNG or SVG fallback
+logo_html = ""
 logo_path = Path('assets/brand/sayplay_logo.png')
 
 if logo_path.exists():
     try:
         with open(logo_path, 'rb') as f:
             logo_data = base64.b64encode(f.read()).decode('utf-8')
-            logo_base64 = f'data:image/png;base64,{logo_data}'
-        print('✓ Logo loaded from file')
+            logo_html = f'<img src="data:image/png;base64,{logo_data}" alt="SayPlay" class="logo-img">'
+        print('✓ Logo loaded from PNG file')
     except Exception as e:
-        print(f'⚠️  Logo load failed: {e}')
+        print(f'⚠️  PNG load failed: {e}')
 
-# Fallback: Use external URL if base64 failed
-if not logo_base64:
-    logo_base64 = 'https://sayplay.co.uk/logo.png'  # Update with real URL if needed
-    print('⚠️  Using fallback logo URL')
+# Fallback: Inline SVG logo
+if not logo_html:
+    logo_html = '''<svg class="logo-img" viewBox="0 0 180 50" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#1a1a1a;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#4a4a4a;stop-opacity:1" />
+            </linearGradient>
+        </defs>
+        <text x="5" y="35" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+              font-size="36" font-weight="700" fill="url(#logoGradient)" letter-spacing="-1">SayPlay</text>
+    </svg>'''
+    print('✓ Using SVG logo fallback')
 
-# Create professional branded HTML
+# Create professional HTML
 html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -154,7 +159,7 @@ html = f"""<!DOCTYPE html>
             font-weight: 600;
         }}
         
-        /* Call to Action - Only colored element */
+        /* Call to Action */
         .cta {{
             background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
             color: white;
@@ -229,8 +234,7 @@ html = f"""<!DOCTYPE html>
 <body>
     <div class="header">
         <div class="logo-container">
-            <img src="{logo_base64}" alt="SayPlay Logo" class="logo-img">
-            <div class="brand-name">SayPlay</div>
+            {logo_html}
         </div>
         <div class="tagline">Voice Message Gifts That Last Forever</div>
     </div>
@@ -254,11 +258,10 @@ html = f"""<!DOCTYPE html>
 </body>
 </html>"""
 
-# Save HTML
+# Save files
 with open('test_article.html', 'w', encoding='utf-8') as f:
     f.write(html)
 
-# Save metadata
 meta = {
     'title': article['title'],
     'keyword': brief['primary_keyword'],
@@ -279,7 +282,6 @@ if github_output:
         f.write(f"category={brief['category']}\n")
         f.write(f"words={article['word_count']}\n")
 
-print('\n💾 Files saved successfully!')
-print(f'   • test_article.html ({article["word_count"]} words)')
+print('\n💾 Files saved!')
+print(f'   • test_article.html')
 print(f'   • article_meta.json')
-print('\n🎉 Article ready with professional design!')
