@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""
-Pinterest Publisher - Visual Search Engine
-PROJECT TITAN - The Syndicate Module
-"""
+"""Pinterest Publisher - Visual Search Engine"""
 import os
 import asyncio
 import time
@@ -12,13 +9,9 @@ import requests
 
 
 class PinterestPublisher:
-    """
-    Automated Pinterest publisher for visual product marketing
-    Uses Pinterest API v5 with direct requests (no SDK needed)
-    """
+    """Automated Pinterest publisher for visual product marketing"""
     
     def __init__(self, access_token: Optional[str] = None):
-        """Initialize Pinterest publisher"""
         self.access_token = access_token
         self.base_url = 'https://api.pinterest.com/v5'
         self.user_id = None
@@ -30,7 +23,6 @@ class PinterestPublisher:
         print("PinterestPublisher initialized")
     
     def _authenticate(self):
-        """Get authenticated user info and boards"""
         try:
             response = requests.get(
                 f'{self.base_url}/user_account',
@@ -41,19 +33,17 @@ class PinterestPublisher:
                 data = response.json()
                 self.user_id = data.get('id', 'unknown')
                 username = data.get('username', 'Unknown')
-                print(f"✓ Authenticated as @{username}")
+                print(f"Authenticated as @{username}")
                 self._load_boards()
                 return True
             else:
-                print(f"✗ Authentication failed: {response.status_code}")
+                print(f"Authentication failed: {response.status_code}")
                 return False
-        
         except Exception as e:
-            print(f"✗ Authentication error: {e}")
+            print(f"Authentication error: {e}")
             return False
     
     def _load_boards(self):
-        """Load user's Pinterest boards"""
         try:
             response = requests.get(
                 f'{self.base_url}/boards',
@@ -65,29 +55,21 @@ class PinterestPublisher:
                 boards = data.get('items', [])
                 for board in boards:
                     self.boards[board['name']] = board['id']
-                print(f"✓ Loaded {len(self.boards)} boards")
+                print(f"Loaded {len(self.boards)} boards")
             else:
-                print(f"⚠ Could not load boards: {response.status_code}")
-        
+                print(f"Could not load boards: {response.status_code}")
         except Exception as e:
-            print(f"⚠ Failed to load boards: {e}")
+            print(f"Failed to load boards: {e}")
     
-    async def publish(
-        self,
-        image_path: str,
-        title: str,
-        description: str,
-        link: str,
-        board: str = 'Gift Ideas',
-        keywords: List[str] = None
-    ) -> Dict:
-        """Publish pin to Pinterest"""
+    async def publish(self, image_path: str, title: str, description: str, 
+                     link: str, board: str = 'Gift Ideas', 
+                     keywords: List[str] = None) -> Dict:
         
         if not self.access_token:
-            print("✗ Not authenticated with Pinterest")
+            print("Not authenticated with Pinterest")
             return {'status': 'error', 'error': 'not_authenticated'}
         
-        print(f"📌 Publishing to Pinterest: {title}")
+        print(f"Publishing to Pinterest: {title}")
         
         board_id = await self._get_or_create_board(board)
         if not board_id:
@@ -97,7 +79,7 @@ class PinterestPublisher:
         optimized_desc = self._optimize_description(description, keywords)
         
         if not os.path.exists(image_path):
-            print(f"✗ Image not found: {image_path}")
+            print(f"Image not found: {image_path}")
             return {'status': 'error', 'error': 'image_not_found'}
         
         try:
@@ -114,11 +96,11 @@ class PinterestPublisher:
             if upload_response.status_code != 201:
                 error_data = upload_response.json() if upload_response.text else {}
                 error_msg = error_data.get('message', f'Status {upload_response.status_code}')
-                print(f"✗ Image upload failed: {error_msg}")
+                print(f"Image upload failed: {error_msg}")
                 return {'status': 'error', 'error': f'image_upload_failed: {error_msg}'}
             
             media_id = upload_response.json()['id']
-            print(f"✓ Image uploaded: {media_id}")
+            print(f"Image uploaded: {media_id}")
             
             pin_data = {
                 'board_id': board_id,
@@ -146,7 +128,7 @@ class PinterestPublisher:
                 pin_id = pin.get('id', 'unknown')
                 pin_url = f"https://pinterest.com/pin/{pin_id}"
                 
-                print(f"✓ Published to Pinterest: {pin_url}")
+                print(f"Published to Pinterest: {pin_url}")
                 
                 return {
                     'status': 'success',
@@ -154,25 +136,21 @@ class PinterestPublisher:
                     'pin_id': pin_id,
                     'board': board
                 }
-            
             else:
                 error_data = pin_response.json() if pin_response.text else {}
                 error_msg = error_data.get('message', f'Status {pin_response.status_code}')
-                print(f"✗ Pin creation failed: {error_msg}")
+                print(f"Pin creation failed: {error_msg}")
                 return {'status': 'error', 'error': error_msg}
-        
         except Exception as e:
-            print(f"✗ Pinterest publish exception: {e}")
+            print(f"Pinterest publish exception: {e}")
             return {'status': 'error', 'error': str(e)}
     
     async def batch_publish(self, images: List[Dict], board: str = 'Gift Ideas') -> List[Dict]:
-        """Batch publish multiple pins"""
         results = []
-        
-        print(f"\n📌 Batch publishing {len(images)} pins to Pinterest...")
+        print(f"Batch publishing {len(images)} pins to Pinterest")
         
         for idx, img in enumerate(images, 1):
-            print(f"\n[{idx}/{len(images)}] Publishing: {img['title']}")
+            print(f"[{idx}/{len(images)}] Publishing: {img['title']}")
             
             result = await self.publish(
                 image_path=img['path'],
@@ -186,17 +164,14 @@ class PinterestPublisher:
             results.append(result)
             
             if idx < len(images):
-                print("  Waiting 2 seconds (rate limiting)...")
                 await asyncio.sleep(2)
         
         success_count = sum(1 for r in results if r['status'] == 'success')
-        print(f"\n✅ Batch complete: {success_count}/{len(images)} successful")
+        print(f"Batch complete: {success_count}/{len(images)} successful")
         
         return results
     
     async def _get_or_create_board(self, board_name: str) -> Optional[str]:
-        """Get board ID or create if doesn't exist"""
-        
         if board_name in self.boards:
             return self.boards[board_name]
         
@@ -220,40 +195,32 @@ class PinterestPublisher:
                 board = response.json()
                 board_id = board['id']
                 self.boards[board_name] = board_id
-                
-                print(f"✓ Created board: {board_name}")
+                print(f"Created board: {board_name}")
                 return board_id
-            
             else:
                 error_data = response.json() if response.text else {}
                 error_msg = error_data.get('message', f'Status {response.status_code}')
-                print(f"✗ Board creation failed: {error_msg}")
+                print(f"Board creation failed: {error_msg}")
                 return None
-        
         except Exception as e:
-            print(f"✗ Board creation error: {e}")
+            print(f"Board creation error: {e}")
             return None
     
     def _optimize_title(self, title: str, keywords: List[str] = None) -> str:
-        """Optimize pin title for Pinterest search"""
         if 'sayplay' not in title.lower():
             title = f"{title} | SayPlay"
-        
         if len(title) > 100:
             title = title[:97] + "..."
-        
         return title
     
     def _optimize_description(self, description: str, keywords: List[str] = None) -> str:
-        """Optimize pin description for Pinterest search"""
-        
         if keywords:
             keyword_phrase = " | ".join(keywords[:3])
             if keyword_phrase.lower() not in description.lower():
                 description = f"{description}\n\n{keyword_phrase}"
         
         if 'shop' not in description.lower() and 'discover' not in description.lower():
-            description += "\n\n👉 Discover more at SayPlay.co.uk"
+            description += "\n\nDiscover more at SayPlay.co.uk"
         
         hashtags = self._generate_hashtags(description, keywords)
         description += f"\n\n{hashtags}"
@@ -264,7 +231,6 @@ class PinterestPublisher:
         return description
     
     def _generate_hashtags(self, text: str, keywords: List[str] = None) -> str:
-        """Generate relevant hashtags for Pinterest"""
         hashtags = set()
         
         if keywords:
@@ -278,7 +244,6 @@ class PinterestPublisher:
         return ' '.join(list(hashtags)[:5])
     
     def get_stats(self) -> Dict:
-        """Get account stats"""
         stats = {
             'authenticated': self.access_token is not None,
             'user_id': self.user_id,
@@ -289,108 +254,44 @@ class PinterestPublisher:
 
 
 async def test_pinterest():
-    """Test Pinterest publisher"""
     from dotenv import load_dotenv
-    
     load_dotenv()
     
-    print("\n📌 Testing Pinterest Publisher...")
-    print("=" * 50)
+    print("\nTesting Pinterest Publisher")
     
     token = os.getenv('PINTEREST_TOKEN')
     if not token:
-        print("\n⚠️  PINTEREST_TOKEN not found in .env")
-        print("\n📝 To get your Pinterest token:")
-        print("   1. Go to: https://developers.pinterest.com/apps/")
-        print("   2. Create app (or use existing)")
-        print("   3. Get access token")
-        print("   4. Add to .env: PINTEREST_TOKEN=your_token_here")
+        print("\nPINTEREST_TOKEN not found in .env")
+        print("Get token from: https://developers.pinterest.com/apps/")
         return
     
     publisher = PinterestPublisher(token)
     
     if not publisher.user_id:
-        print("\n❌ Authentication failed")
-        print("   Check your PINTEREST_TOKEN is valid")
+        print("\nAuthentication failed")
+        print("Check your PINTEREST_TOKEN is valid")
         return
     
     stats = publisher.get_stats()
-    print(f"\n✅ Pinterest Publisher ready!")
-    print(f"   User ID: {stats['user_id']}")
-    print(f"   Boards: {stats['boards_loaded']}")
+    print(f"\nPinterest Publisher ready")
+    print(f"User ID: {stats['user_id']}")
+    print(f"Boards: {stats['boards_loaded']}")
     if stats['boards']:
-        print(f"   Board names: {', '.join(stats['boards'][:5])}")
+        print(f"Board names: {', '.join(stats['boards'][:5])}")
     
-    print("\n💡 Pinterest is THE platform for gift discovery")
-    print("   • 450M users searching for gift ideas monthly")
-    print("   • 97% unbranded searches (high conversion potential)")
-    print("   • Perfect for SayPlay's visual products")
-    
-    print("\n📋 Next steps:")
-    print("   1. Create product photos (1000x1500px vertical)")
-    print("   2. Add SayPlay logo/branding")
-    print("   3. Use publish() or batch_publish() methods")
-    print("   4. Target gift keywords (birthday, wedding, etc.)")
-    
-    print("\n" + "=" * 50)
+    print("\nPinterest is ready for pin creation")
 
 
 if __name__ == "__main__":
     asyncio.run(test_pinterest())
 ```
 
+**THAT'S IT! Nothing else! No markdown, no instructions, just code!**
+
+---
+
+## Commit and Test
+
 **Commit message:**
 ```
-Fix Pinterest publisher - remove markdown artifacts, clean code
-```
-
----
-
-## ✅ WHAT I FIXED
-
-1. **Removed all markdown artifacts** (```, code blocks, etc.)
-2. **Clean Python code only**
-3. **No syntax errors**
-4. **Proper formatting**
-5. **Working test function**
-
----
-
-## 🚀 NOW RE-RUN WORKFLOW
-
-After committing this fix:
-
-1. **Go to:** Actions tab
-2. **Click:** "Daily Titan Content (Blog + Pinterest)"
-3. **Click:** "Run workflow"
-4. **Wait:** 3-5 minutes
-5. **Should succeed!** ✅
-
----
-
-## 📊 EXPECTED OUTPUT
-
-**Step 1 - Blog Generation:**
-```
-✅ generate-blog: SUCCESS
-   Article generated: test_article.html
-   Notification sent to Telegram
-```
-
-**Step 2 - Pinterest Test:**
-```
-✅ test-pinterest: SUCCESS
-   ✓ Authenticated as @your_username
-   ✓ Loaded X boards
-   Pinterest ready!
-```
-
-**Telegram:**
-```
-📝 New Blog Article Generated!
-📰 Title: [Article Title]
-⬇️ Download: [GitHub Actions link]
-
-📌 Pinterest Status: READY
-✅ API connection verified
-💡 Ready to create pins manually
+Fix Pinterest publisher - clean Python only
