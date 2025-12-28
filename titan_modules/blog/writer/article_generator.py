@@ -10,6 +10,7 @@ Features:
 - Competitor analysis integration
 """
 import sys
+import os
 from pathlib import Path
 from typing import Dict, List
 import random
@@ -17,8 +18,29 @@ import re
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-import google.generativeai as genai
-from loguru import logger
+# NEW: Use updated Gemini package
+from google import genai
+
+# Simple logger replacement (no extra dependencies)
+class Logger:
+    """Simple logger using print statements"""
+    @staticmethod
+    def info(msg):
+        print(f"ℹ️  {msg}")
+    
+    @staticmethod
+    def success(msg):
+        print(f"✅ {msg}")
+    
+    @staticmethod
+    def error(msg):
+        print(f"❌ {msg}")
+    
+    @staticmethod
+    def warning(msg):
+        print(f"⚠️  {msg}")
+
+logger = Logger()
 
 
 class ArticleGenerator:
@@ -34,10 +56,12 @@ class ArticleGenerator:
     
     def __init__(self, api_key: str):
         """Initialize article generator"""
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # NEW: Initialize new Gemini client
+        client = genai.Client(api_key=api_key)
+        self.client = client
+        self.model_name = 'gemini-2.0-flash-exp'
         
-        logger.info("ArticleGenerator initialized")
+        logger.info("ArticleGenerator initialized with Gemini 2.0")
     
     def write_article(self, brief: Dict) -> Dict:
         """
@@ -46,10 +70,10 @@ class ArticleGenerator:
         Args:
             brief: {
                 'primary_keyword': Main topic
-                'related_keywords': List of LSI keywords
-                'target_length': Word count target
-                'competitor_insights': Analysis from top competitors
-                'brand_voice': Brand personality prompt
+                'related_keywords': List of LSI keywords (optional)
+                'target_length': Word count target (optional)
+                'competitor_insights': Analysis from top competitors (optional)
+                'brand_voice': Brand personality prompt (optional)
             }
         
         Returns:
@@ -57,23 +81,28 @@ class ArticleGenerator:
         """
         
         # Extract brief details
-        keyword = brief['primary_keyword']
+        keyword = brief.get('primary_keyword', 'personalized gifts')
         target_length = brief.get('target_length', 2000)
         brand_voice = brief.get('brand_voice', '')
+        
+        logger.info(f"Generating article: {keyword}")
         
         # Step 1: Generate outline
         outline = self._generate_outline(brief)
         
         # Step 2: Write each section
         sections = []
-        for section in outline:
+        for idx, section in enumerate(outline, 1):
+            logger.info(f"Writing section {idx}/{len(outline)}: {section['h2']}")
             content = self._write_section(section, brief)
             sections.append(content)
         
         # Step 3: Add introduction
+        logger.info("Writing introduction...")
         intro = self._write_introduction(keyword, outline, brief)
         
         # Step 4: Add conclusion
+        logger.info("Writing conclusion...")
         conclusion = self._write_conclusion(keyword, brief)
         
         # Step 5: Assemble article
@@ -88,7 +117,7 @@ class ArticleGenerator:
         # Step 8: Generate metadata
         meta = self._generate_metadata(keyword, full_text)
         
-        return {
+        result = {
             'text': full_text,
             'html': html,
             'title': meta['title'],
@@ -96,11 +125,15 @@ class ArticleGenerator:
             'word_count': len(full_text.split()),
             'outline': outline
         }
+        
+        logger.success(f"Article complete: {result['word_count']} words")
+        
+        return result
     
     def _generate_outline(self, brief: Dict) -> List[Dict]:
         """Generate article outline from brief"""
         
-        keyword = brief['primary_keyword']
+        keyword = brief.get('primary_keyword', 'personalized gifts')
         
         prompt = f"""Create an outline for a blog article about "{keyword}".
 
@@ -121,13 +154,16 @@ Format each section as:
 Output ONLY the outline, no additional text."""
         
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
             outline_text = response.text.strip()
             
             # Parse outline into structure
             outline = self._parse_outline(outline_text)
             
-            logger.info(f"✓ Generated outline with {len(outline)} sections")
+            logger.success(f"Generated outline with {len(outline)} sections")
             return outline
             
         except Exception as e:
@@ -148,10 +184,12 @@ Output ONLY the outline, no additional text."""
         h2_title = section['h2']
         h3s = section.get('h3s', [])
         
+        h3_text = '\n'.join('### ' + h3 for h3 in h3s) if h3s else ''
+        
         prompt = f"""Write a blog section with this structure:
 
 ## {h2_title}
-{chr(10).join('### ' + h3 for h3 in h3s)}
+{h3_text}
 
 {brief.get('brand_voice', '')}
 
@@ -166,24 +204,29 @@ Requirements:
 Write ONLY the section content, no headers."""
         
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
             content = response.text.strip()
             
             return f"## {h2_title}\n\n{content}\n"
             
         except Exception as e:
             logger.error(f"Section writing failed: {e}")
-            return f"## {h2_title}\n\n[Content generation failed]\n"
+            return f"## {h2_title}\n\n[Content generation failed for this section]\n"
     
     def _write_introduction(self, keyword: str, outline: List, brief: Dict) -> str:
         """Write engaging introduction"""
+        
+        outline_preview = '\n'.join('- ' + s['h2'] for s in outline[:5])
         
         prompt = f"""Write an engaging introduction for a blog article about "{keyword}".
 
 {brief.get('brand_voice', '')}
 
 The article will cover:
-{chr(10).join('- ' + s['h2'] for s in outline[:5])}
+{outline_preview}
 
 Requirements:
 - 150-200 words
@@ -196,7 +239,10 @@ Requirements:
 Write ONLY the introduction text, no title."""
         
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
             return response.text.strip() + "\n\n"
         except Exception as e:
             logger.error(f"Introduction failed: {e}")
@@ -220,7 +266,10 @@ Requirements:
 Write ONLY the conclusion text."""
         
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
             return "\n\n## Conclusion\n\n" + response.text.strip()
         except Exception as e:
             logger.error(f"Conclusion failed: {e}")
@@ -282,9 +331,6 @@ Write ONLY the conclusion text."""
         # Italic
         html = re.sub(r'\*(.+?)\*', r'<em>\1</em>', html)
         
-        # Lists
-        # TODO: Implement list conversion
-        
         return html
     
     def _generate_metadata(self, keyword: str, text: str) -> Dict:
@@ -342,48 +388,86 @@ Write ONLY the conclusion text."""
 
 if __name__ == "__main__":
     """Test article generator"""
-    import os
     from dotenv import load_dotenv
     
     load_dotenv()
     
-    print("📝 Testing Article Generator...")
+    print("\n📝 Testing Article Generator...")
+    print("=" * 50)
     
     api_key = os.getenv('GEMINI_API_KEY')
     if not api_key:
-        print("\n⚠️  Set GEMINI_API_KEY in .env")
+        print("\n⚠️  GEMINI_API_KEY not found in .env")
+        print("   Get API key from: https://makersuite.google.com/app/apikey")
         exit(1)
     
-    generator = ArticleGenerator(api_key)
-    
-    # Test brief
-    brief = {
-        'primary_keyword': 'personalized birthday gifts 2025',
-        'related_keywords': [
-            'unique birthday presents',
-            'custom gift ideas',
-            'voice message card',
-            'NFC gift technology'
-        ],
-        'target_length': 1500,
-        'brand_voice': """You are writing for SayPlay - a warm, personal brand that creates 
-                          voice message gifts. Be emotional and heartfelt, not corporate."""
-    }
-    
-    print(f"\n🎯 Generating article: {brief['primary_keyword']}")
-    print(f"   Target: {brief['target_length']} words")
-    
-    article = generator.write_article(brief)
-    
-    print(f"\n✅ Article generated!")
-    print(f"   Title: {article['title']}")
-    print(f"   Words: {article['word_count']}")
-    print(f"   Sections: {len(article['outline'])}")
-    
-    print(f"\n📄 Preview (first 500 chars):")
-    print(article['text'][:500] + "...")
-    
-    # Save for review
-    output_file = Path('test_article.html')
-    output_file.write_text(article['html'])
-    print(f"\n💾 Saved to: {output_file}")
+    try:
+        generator = ArticleGenerator(api_key)
+        
+        # Test brief
+        brief = {
+            'primary_keyword': 'personalized birthday gifts 2025',
+            'related_keywords': [
+                'unique birthday presents',
+                'custom gift ideas',
+                'voice message card',
+                'NFC gift technology'
+            ],
+            'target_length': 1500,
+            'brand_voice': """You are writing for SayPlay - a warm, personal brand that creates 
+                              voice message gifts. Be emotional and heartfelt, not corporate."""
+        }
+        
+        print(f"\n🎯 Generating article: {brief['primary_keyword']}")
+        print(f"   Target: {brief['target_length']} words")
+        print("")
+        
+        article = generator.write_article(brief)
+        
+        print(f"\n✅ Article generated successfully!")
+        print(f"   Title: {article['title']}")
+        print(f"   Words: {article['word_count']}")
+        print(f"   Sections: {len(article['outline'])}")
+        
+        print(f"\n📄 Preview (first 300 chars):")
+        print("-" * 50)
+        print(article['text'][:300] + "...")
+        print("-" * 50)
+        
+        # Save for review
+        output_file = Path('test_article.html')
+        
+        # Create complete HTML document
+        full_html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{article['meta_description']}">
+    <title>{article['title']}</title>
+    <style>
+        body {{ font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }}
+        h1 {{ color: #FF6B35; }}
+        h2 {{ color: #004E89; margin-top: 2em; }}
+        h3 {{ color: #1A659E; }}
+        p {{ margin: 1em 0; }}
+    </style>
+</head>
+<body>
+    <h1>{article['title']}</h1>
+    {article['html']}
+</body>
+</html>"""
+        
+        output_file.write_text(full_html, encoding='utf-8')
+        print(f"\n💾 Saved to: {output_file.absolute()}")
+        print(f"   Open in browser to view")
+        
+        print("\n" + "=" * 50)
+        print("✅ Test complete!")
+        
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        exit(1)
