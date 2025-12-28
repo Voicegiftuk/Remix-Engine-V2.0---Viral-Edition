@@ -1,4 +1,4 @@
-name: Daily Titan Content (Simple & Working)
+name: Daily Titan Content
 
 on:
   schedule:
@@ -27,7 +27,6 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements_titan.txt
-          echo "✓ Dependencies installed"
       
       - name: Generate article
         id: generate
@@ -39,10 +38,9 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          
           if [ -f "titan_modules/blog/intelligence/topics_database.json" ]; then
             git add titan_modules/blog/intelligence/topics_database.json
-            git diff --staged --quiet || git commit -m "Update topics database [skip ci]"
+            git diff --staged --quiet || git commit -m "Update topics [skip ci]"
             git push || echo "Nothing to push"
           fi
       
@@ -61,28 +59,16 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TITLE: ${{ steps.generate.outputs.title }}
+          KEYWORD: ${{ steps.generate.outputs.keyword }}
+          CATEGORY: ${{ steps.generate.outputs.category }}
+          WORDS: ${{ steps.generate.outputs.words }}
         run: |
-          TITLE="${{ steps.generate.outputs.title }}"
-          KEYWORD="${{ steps.generate.outputs.keyword }}"
-          CATEGORY="${{ steps.generate.outputs.category }}"
-          WORDS="${{ steps.generate.outputs.words }}"
           URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
-          MESSAGE="🎁 SayPlay Content Generated!
-
-📰 ${TITLE}
-
-🎯 Keyword: ${KEYWORD}
-📁 Category: ${CATEGORY}
-📊 Words: ${WORDS}
-
-⬇️ Download: ${URL}
-
-🤖 Perpetual content - never repeats!"
-          
           curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
             -d "chat_id=${CHAT_ID}" \
-            -d "text=${MESSAGE}"
+            -d "parse_mode=HTML" \
+            -d "text=🎁 <b>SayPlay Content Generated!</b>%0A%0A📰 ${TITLE}%0A%0A🎯 Keyword: ${KEYWORD}%0A📁 Category: ${CATEGORY}%0A📊 Words: ${WORDS}%0A%0A⬇️ <a href='${URL}'>Download Article</a>%0A%0A🤖 Perpetual content - never repeats!"
       
       - name: Notify failure
         if: failure()
