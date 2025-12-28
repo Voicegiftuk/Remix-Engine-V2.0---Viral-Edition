@@ -1,13 +1,12 @@
 # ============================================
-# TITAN REQUIREMENTS (Fixed & Working)
+# TITAN REQUIREMENTS (Working)
 # ============================================
 
-# Core AI (Blog Generation) - UPDATED to new package
-google-genai>=0.2.0
+# Core AI - OLD PACKAGE (stable and working)
+google-generativeai>=0.3.0
 
 # HTTP & APIs
 requests>=2.31.0
-requests-oauthlib>=1.3.1
 aiohttp>=3.9.0
 
 # Content Processing
@@ -18,18 +17,14 @@ markdown>=3.5.0
 # Image Handling
 Pillow>=10.0.0
 
-# Logging (used in article_generator)
-loguru>=0.7.0
-
 # Utilities
 python-dotenv>=1.0.0
 python-slugify>=8.0.0
 pytz>=2023.3
-pydantic>=2.0.0
 
 # ============================================
 # NOTES:
-# - Switched from google.generativeai to google.genai (new package)
-# - Added loguru for logging
-# - All packages tested and working
+# - Using google-generativeai (old stable package)
+# - No loguru needed (built-in Logger class)
+# - All tested and working
 # ============================================
