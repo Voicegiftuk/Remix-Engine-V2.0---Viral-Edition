@@ -1,39 +1,44 @@
 #!/usr/bin/env python3
-"""Generate blog article - called by GitHub Actions"""
+"""Generate blog article - NEW GOOGLE GENAI SDK"""
 import os
 import sys
 import json
 
 sys.path.insert(0, '.')
 
-# Get API key from environment
+# Verify API key
 api_key = os.environ.get('GEMINI_API_KEY')
 
 if not api_key:
-    print("ERROR: GEMINI_API_KEY not found!")
+    print("❌ ERROR: GEMINI_API_KEY not found!")
+    print("Available env vars:", [k for k in os.environ.keys() if 'GEMINI' in k or 'GOOGLE' in k])
     sys.exit(1)
 
-print(f"✓ API Key loaded: {len(api_key)} chars")
+print(f"✅ API Key loaded: {len(api_key)} chars")
+print(f"   Using NEW Google Genai SDK")
 
 from titan_modules.blog.intelligence.topic_generator import TopicGenerator
 from titan_modules.blog.writer.article_generator import ArticleGenerator
 
 # Generate topic
-print('\n🎯 Generating topic...')
+print('\n🎯 Generating intelligent topic...')
 topic_gen = TopicGenerator()
 brief = topic_gen.generate_next_topic()
 
-print(f'Topic: {brief["primary_keyword"]}')
-print(f'Category: {brief["category"]}')
+print(f'✓ Topic: {brief["primary_keyword"]}')
+print(f'✓ Category: {brief["category"]}')
+print(f'✓ Trending: {brief["trending_score"]}/100')
 
-# Generate article
-print('\n✍️  Writing article...')
+# Generate article with NEW SDK
+print('\n✍️  Writing article with NEW Google Genai SDK...')
 article_gen = ArticleGenerator(api_key)
 article = article_gen.write_article(brief)
 
-print(f'\n✅ Complete: {article["word_count"]} words')
+print(f'\n✅ Article complete!')
+print(f'   Words: {article["word_count"]}')
+print(f'   Sections: {len(article["outline"])}')
 
-# Create HTML
+# Create branded HTML
 html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,7 +48,7 @@ html = f"""<!DOCTYPE html>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
-            font-family: system-ui, sans-serif;
+            font-family: system-ui, -apple-system, sans-serif;
             max-width: 900px;
             margin: 0 auto;
             padding: 20px;
@@ -78,6 +83,7 @@ html = f"""<!DOCTYPE html>
         }}
         h3 {{ color: #1A659E; margin-top: 1.5em; font-size: 1.4em; }}
         p {{ margin: 1.2em 0; font-size: 1.1em; }}
+        strong {{ color: #FF6B35; }}
         .cta {{
             background: linear-gradient(135deg, #004E89 0%, #1A659E 100%);
             color: white;
@@ -96,6 +102,7 @@ html = f"""<!DOCTYPE html>
             text-decoration: none;
             font-weight: bold;
             margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
         }}
         .footer {{
             text-align: center;
@@ -120,13 +127,14 @@ html = f"""<!DOCTYPE html>
         {article['html']}
     </div>
     <div class="cta">
-        <h3>Create Your Own Voice Message Gift</h3>
-        <p>Turn your words into unforgettable memories</p>
-        <a href="https://sayplay.co.uk" class="cta-button">Shop Now</a>
+        <h3>🎁 Create Your Own Voice Message Gift</h3>
+        <p>Turn your words into unforgettable memories with SayPlay</p>
+        <a href="https://sayplay.co.uk" class="cta-button">Shop Now →</a>
     </div>
     <div class="footer">
         <p><strong>SayPlay | Just Tap - No App Needed</strong></p>
         <p>🌐 <a href="https://sayplay.co.uk" style="color:#FF6B35">SayPlay.co.uk</a></p>
+        <p style="margin-top:20px; font-size:0.9em; opacity:0.7">Powered by Titan Content Engine</p>
     </div>
 </body>
 </html>"""
@@ -140,13 +148,14 @@ meta = {
     'title': article['title'],
     'keyword': brief['primary_keyword'],
     'category': brief['category'],
-    'words': article['word_count']
+    'words': article['word_count'],
+    'trending': brief['trending_score']
 }
 
 with open('article_meta.json', 'w') as f:
-    json.dump(meta, f)
+    json.dump(meta, f, indent=2)
 
-# Output for GitHub Actions
+# GitHub Actions output
 github_output = os.environ.get('GITHUB_OUTPUT')
 if github_output:
     with open(github_output, 'a') as f:
@@ -155,6 +164,7 @@ if github_output:
         f.write(f"category={brief['category']}\n")
         f.write(f"words={article['word_count']}\n")
 
-print('\n✓ Files saved!')
-print(f'  - test_article.html')
-print(f'  - article_meta.json')
+print('\n💾 Files saved successfully!')
+print(f'   • test_article.html ({article["word_count"]} words)')
+print(f'   • article_meta.json')
+print('\n🎉 NEW Google Genai SDK working perfectly!')
