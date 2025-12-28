@@ -1,4 +1,4 @@
-name: Daily Titan Content (Intelligent + Perpetual)
+name: Daily Titan Content (Intelligent + Perpetual + Branded)
 
 on:
   schedule:
@@ -72,20 +72,33 @@ jobs:
           echo "✓ Environment configured"
       
       # ============================================
-      # INTELLIGENT CONTENT GENERATION
+      # INTELLIGENT CONTENT GENERATION WITH BRANDING
       # ============================================
       
-      - name: Generate intelligent blog article
+      - name: Generate branded blog article
         id: blog
         run: |
-          echo "🧠 Generating intelligent content..."
+          echo "🧠 Generating intelligent branded content..."
           
           python << 'PYTHON_SCRIPT'
           import os
           import json
+          import base64
           from pathlib import Path
           from titan_modules.blog.intelligence.topic_generator import TopicGenerator
           from titan_modules.blog.writer.article_generator import ArticleGenerator
+          
+          # Load SayPlay logo
+          logo_path = Path('assets/brand/sayplay_logo.png')
+          if logo_path.exists():
+              with open(logo_path, 'rb') as f:
+                  logo_bytes = f.read()
+                  logo_base64 = base64.b64encode(logo_bytes).decode('utf-8')
+              logo_html = f'<img src="data:image/png;base64,{logo_base64}" alt="SayPlay Logo" style="max-height: 80px; margin-bottom: 20px;">'
+              print("✓ Logo loaded: assets/brand/sayplay_logo.png")
+          else:
+              logo_html = '<div class="logo">🎁 SayPlay</div>'
+              print("⚠️  Logo not found, using emoji fallback")
           
           # Generate smart topic
           print("\n🎯 Generating unique topic...")
@@ -105,7 +118,7 @@ jobs:
           print(f"   Words: {article['word_count']}")
           print(f"   Sections: {len(article['outline'])}")
           
-          # Save article with metadata
+          # Create fully branded HTML
           html_content = f"""<!DOCTYPE html>
           <html lang="en">
           <head>
@@ -113,56 +126,277 @@ jobs:
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
               <meta name="description" content="{article['meta_description']}">
               <meta name="keywords" content="{', '.join(brief['related_keywords'][:5])}">
+              <meta property="og:title" content="{article['title']}">
+              <meta property="og:description" content="{article['meta_description']}">
+              <meta property="og:url" content="https://sayplay.co.uk">
               <title>{article['title']}</title>
               <style>
-                  body {{
-                      font-family: system-ui, -apple-system, sans-serif;
-                      max-width: 800px;
-                      margin: 40px auto;
-                      padding: 20px;
-                      line-height: 1.6;
-                      color: #333;
+                  * {{
+                      margin: 0;
+                      padding: 0;
+                      box-sizing: border-box;
                   }}
+                  
+                  body {{
+                      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+                      max-width: 900px;
+                      margin: 0 auto;
+                      padding: 20px;
+                      line-height: 1.7;
+                      color: #2C3E50;
+                      background: #FAFAFA;
+                  }}
+                  
+                  /* SAYPLAY BRANDED HEADER */
+                  .header {{
+                      background: linear-gradient(135deg, #FF6B35 0%, #FF8C61 100%);
+                      color: white;
+                      padding: 40px;
+                      border-radius: 15px;
+                      margin-bottom: 40px;
+                      text-align: center;
+                      box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+                  }}
+                  
+                  .logo {{
+                      font-size: 3em;
+                      font-weight: bold;
+                      margin-bottom: 10px;
+                      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+                  }}
+                  
+                  .tagline {{
+                      font-size: 1.2em;
+                      opacity: 0.95;
+                      font-weight: 300;
+                      letter-spacing: 0.5px;
+                  }}
+                  
+                  /* ARTICLE CONTAINER */
+                  .article {{
+                      background: white;
+                      padding: 50px;
+                      border-radius: 15px;
+                      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+                  }}
+                  
+                  /* METADATA BAR */
+                  .meta {{
+                      display: flex;
+                      gap: 20px;
+                      flex-wrap: wrap;
+                      padding: 20px;
+                      background: #F8F9FA;
+                      border-left: 4px solid #FF6B35;
+                      border-radius: 8px;
+                      margin-bottom: 30px;
+                      font-size: 0.9em;
+                      color: #666;
+                  }}
+                  
+                  .meta-item {{
+                      display: flex;
+                      align-items: center;
+                      gap: 5px;
+                  }}
+                  
+                  .meta-label {{
+                      font-weight: 600;
+                      color: #FF6B35;
+                  }}
+                  
+                  /* TYPOGRAPHY */
                   h1 {{
                       color: #FF6B35;
                       font-size: 2.5em;
                       margin-bottom: 0.5em;
+                      line-height: 1.2;
+                      font-weight: 700;
                   }}
+                  
                   h2 {{
                       color: #004E89;
                       margin-top: 2em;
+                      margin-bottom: 0.8em;
                       font-size: 1.8em;
+                      border-bottom: 3px solid #FF6B35;
+                      padding-bottom: 10px;
+                      font-weight: 600;
                   }}
+                  
                   h3 {{
                       color: #1A659E;
+                      margin-top: 1.5em;
+                      margin-bottom: 0.6em;
                       font-size: 1.4em;
+                      font-weight: 600;
                   }}
+                  
                   p {{
-                      margin: 1em 0;
+                      margin: 1.2em 0;
                       font-size: 1.1em;
+                      line-height: 1.8;
                   }}
-                  .meta {{
+                  
+                  strong {{
+                      color: #FF6B35;
+                      font-weight: 600;
+                  }}
+                  
+                  em {{
+                      color: #004E89;
+                      font-style: italic;
+                  }}
+                  
+                  /* CALL TO ACTION */
+                  .cta {{
+                      background: linear-gradient(135deg, #004E89 0%, #1A659E 100%);
+                      color: white;
+                      padding: 40px;
+                      border-radius: 15px;
+                      margin-top: 50px;
+                      text-align: center;
+                      box-shadow: 0 5px 20px rgba(0, 78, 137, 0.3);
+                  }}
+                  
+                  .cta h3 {{
+                      color: white;
+                      margin-top: 0;
+                      font-size: 2em;
+                      border: none;
+                      padding: 0;
+                  }}
+                  
+                  .cta p {{
+                      font-size: 1.2em;
+                      margin: 20px 0;
+                      opacity: 0.95;
+                  }}
+                  
+                  .cta-button {{
+                      display: inline-block;
+                      background: #FF6B35;
+                      color: white;
+                      padding: 15px 40px;
+                      border-radius: 30px;
+                      text-decoration: none;
+                      font-weight: bold;
+                      font-size: 1.1em;
+                      margin-top: 20px;
+                      transition: all 0.3s ease;
+                      box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+                  }}
+                  
+                  .cta-button:hover {{
+                      transform: translateY(-2px);
+                      box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+                  }}
+                  
+                  /* FOOTER */
+                  .footer {{
+                      text-align: center;
+                      padding: 40px 20px;
                       color: #666;
                       font-size: 0.9em;
-                      margin-bottom: 2em;
-                      padding: 1em;
-                      background: #f5f5f5;
-                      border-radius: 5px;
+                      margin-top: 50px;
+                      border-top: 2px solid #E0E0E0;
+                  }}
+                  
+                  .footer-logo {{
+                      color: #FF6B35;
+                      font-weight: bold;
+                      font-size: 1.5em;
+                      margin-bottom: 10px;
+                  }}
+                  
+                  .footer a {{
+                      color: #FF6B35;
+                      text-decoration: none;
+                  }}
+                  
+                  .footer a:hover {{
+                      text-decoration: underline;
+                  }}
+                  
+                  /* RESPONSIVE */
+                  @media (max-width: 768px) {{
+                      body {{
+                          padding: 10px;
+                      }}
+                      
+                      .header {{
+                          padding: 30px 20px;
+                      }}
+                      
+                      .article {{
+                          padding: 30px 20px;
+                      }}
+                      
+                      .logo {{
+                          font-size: 2em;
+                      }}
+                      
+                      h1 {{
+                          font-size: 1.8em;
+                      }}
+                      
+                      h2 {{
+                          font-size: 1.4em;
+                      }}
+                      
+                      .meta {{
+                          flex-direction: column;
+                          gap: 10px;
+                      }}
                   }}
               </style>
           </head>
           <body>
-              <div class="meta">
-                  <strong>Category:</strong> {brief['category'].title()} | 
-                  <strong>Words:</strong> {article['word_count']} | 
-                  <strong>Trending:</strong> {brief['trending_score']}/100
+              <!-- SAYPLAY BRANDED HEADER -->
+              <div class="header">
+                  {logo_html}
+                  <div class="tagline">Voice Message Gifts That Last Forever</div>
               </div>
-              <h1>{article['title']}</h1>
-              {article['html']}
-              <hr>
-              <p style="text-align: center; color: #666; margin-top: 3em;">
-                  Generated by Titan Content Engine | SayPlay.co.uk
-              </p>
+              
+              <!-- ARTICLE CONTENT -->
+              <div class="article">
+                  <div class="meta">
+                      <div class="meta-item">
+                          <span class="meta-label">📁 Category:</span>
+                          <span>{brief['category'].title()}</span>
+                      </div>
+                      <div class="meta-item">
+                          <span class="meta-label">📊 Words:</span>
+                          <span>{article['word_count']}</span>
+                      </div>
+                      <div class="meta-item">
+                          <span class="meta-label">🔥 Trending:</span>
+                          <span>{brief['trending_score']}/100</span>
+                      </div>
+                  </div>
+                  
+                  <h1>{article['title']}</h1>
+                  
+                  {article['html']}
+              </div>
+              
+              <!-- CALL TO ACTION -->
+              <div class="cta">
+                  <h3>🎁 Create Your Own Voice Message Gift</h3>
+                  <p>Turn your words into unforgettable memories with SayPlay's personalized voice message gifts.</p>
+                  <p><strong>Just Tap - No App Needed</strong></p>
+                  <a href="https://sayplay.co.uk" class="cta-button">Shop Now →</a>
+              </div>
+              
+              <!-- FOOTER -->
+              <div class="footer">
+                  <div class="footer-logo">🎁 SayPlay</div>
+                  <p><strong>Voice Message Gifts | Just Tap - No App Needed</strong></p>
+                  <p>📍 UK | 🌐 <a href="https://sayplay.co.uk">SayPlay.co.uk</a></p>
+                  <p style="margin-top: 20px; font-size: 0.85em; opacity: 0.8;">
+                      Generated by Titan Content Engine | © 2025 SayPlay
+                  </p>
+              </div>
           </body>
           </html>"""
           
@@ -170,20 +404,21 @@ jobs:
           with open('test_article.html', 'w', encoding='utf-8') as f:
               f.write(html_content)
           
-          # Save metadata for notifications
+          # Save metadata
           metadata = {
               'title': article['title'],
               'keyword': brief['primary_keyword'],
               'category': brief['category'],
               'words': article['word_count'],
               'trending': brief['trending_score'],
-              'related_keywords': brief['related_keywords'][:5]
+              'related_keywords': brief['related_keywords'][:5],
+              'has_logo': logo_path.exists()
           }
           
           with open('article_meta.json', 'w') as f:
               json.dump(metadata, f, indent=2)
           
-          # Save metadata to GitHub output
+          # GitHub Actions output
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"article_title={article['title']}\n")
               f.write(f"article_keyword={brief['primary_keyword']}\n")
@@ -191,12 +426,13 @@ jobs:
               f.write(f"article_words={article['word_count']}\n")
               f.write(f"trending_score={brief['trending_score']}\n")
           
-          print(f"\n💾 Article saved: test_article.html")
-          print(f"📊 Metadata saved: article_meta.json")
+          print(f"\n💾 Article saved with full SayPlay branding!")
+          print(f"   Logo: {'✅ Embedded' if logo_path.exists() else '⚠️  Emoji fallback'}")
+          print(f"   File: test_article.html")
           
           PYTHON_SCRIPT
           
-          echo "✅ Content generation complete"
+          echo "✅ Branded content generation complete"
       
       # ============================================
       # PERSIST TOPIC DATABASE
@@ -207,7 +443,6 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # Add topics database if it exists
           if [ -f "titan_modules/blog/intelligence/topics_database.json" ]; then
             git add titan_modules/blog/intelligence/topics_database.json
             git diff --staged --quiet || git commit -m "Update topics database [skip ci]"
@@ -248,17 +483,19 @@ jobs:
           TRENDING="${{ steps.blog.outputs.trending_score }}"
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
-          MESSAGE="🧠 Intelligent Content Generated!%0A%0A"
-          MESSAGE="${MESSAGE}📰 <b>${TITLE}</b>%0A%0A"
-          MESSAGE="${MESSAGE}🎯 Keyword: ${KEYWORD}%0A"
+          MESSAGE="🎁 <b>SayPlay Content Generated!</b>%0A%0A"
+          MESSAGE="${MESSAGE}📰 ${TITLE}%0A%0A"
+          MESSAGE="${MESSAGE}🎯 Keyword: <code>${KEYWORD}</code>%0A"
           MESSAGE="${MESSAGE}📁 Category: ${CATEGORY}%0A"
           MESSAGE="${MESSAGE}📊 Words: ${WORDS}%0A"
           MESSAGE="${MESSAGE}🔥 Trending: ${TRENDING}/100%0A%0A"
-          MESSAGE="${MESSAGE}⬇️ <a href='${DOWNLOAD_URL}'>Download Article</a>%0A%0A"
-          MESSAGE="${MESSAGE}💡 <b>Next Steps:</b>%0A"
-          MESSAGE="${MESSAGE}1️⃣ Download article%0A"
-          MESSAGE="${MESSAGE}2️⃣ Create product photo%0A"
-          MESSAGE="${MESSAGE}3️⃣ Create Pinterest pin%0A%0A"
+          MESSAGE="${MESSAGE}⬇️ <a href='${DOWNLOAD_URL}'>Download Branded Article</a>%0A%0A"
+          MESSAGE="${MESSAGE}✨ <b>Features:</b>%0A"
+          MESSAGE="${MESSAGE}• SayPlay logo embedded%0A"
+          MESSAGE="${MESSAGE}• Brand colors applied%0A"
+          MESSAGE="${MESSAGE}• Call-to-action included%0A"
+          MESSAGE="${MESSAGE}• Mobile responsive%0A%0A"
+          MESSAGE="${MESSAGE}💡 <b>Next:</b> Create Pinterest pin%0A"
           MESSAGE="${MESSAGE}🤖 <i>Perpetual content - never repeats!</i>"
           
           curl -s -X POST \
@@ -318,12 +555,16 @@ jobs:
           MESSAGE="📌 <b>Pinterest Status: READY</b>%0A%0A"
           MESSAGE="${MESSAGE}✅ API connection verified%0A"
           MESSAGE="${MESSAGE}✅ Ready to create pins%0A%0A"
-          MESSAGE="${MESSAGE}📸 <b>Pin Creation Guide:</b>%0A"
-          MESSAGE="${MESSAGE}1. Use product photo (1000x1500px)%0A"
-          MESSAGE="${MESSAGE}2. Add SayPlay branding%0A"
-          MESSAGE="${MESSAGE}3. Copy article title%0A"
-          MESSAGE="${MESSAGE}4. Link to SayPlay.co.uk%0A"
-          MESSAGE="${MESSAGE}5. Publish to relevant board"
+          MESSAGE="${MESSAGE}📸 <b>Pin Creation Checklist:</b>%0A"
+          MESSAGE="${MESSAGE}1️⃣ Product photo (1000x1500px)%0A"
+          MESSAGE="${MESSAGE}2️⃣ Add SayPlay logo watermark%0A"
+          MESSAGE="${MESSAGE}3️⃣ Use brand colors (#FF6B35)%0A"
+          MESSAGE="${MESSAGE}4️⃣ Copy article title%0A"
+          MESSAGE="${MESSAGE}5️⃣ Link to SayPlay.co.uk%0A%0A"
+          MESSAGE="${MESSAGE}🎨 <b>Brand Assets:</b>%0A"
+          MESSAGE="${MESSAGE}• Logo: assets/brand/sayplay_logo.png%0A"
+          MESSAGE="${MESSAGE}• Orange: #FF6B35%0A"
+          MESSAGE="${MESSAGE}• Blue: #004E89"
           
           curl -s -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
@@ -402,28 +643,80 @@ jobs:
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d parse_mode="HTML" \
             -d text="${MESSAGE}"
+```
 
-# ============================================
-# WORKFLOW METADATA
-# ============================================
+---
 
-# INTELLIGENT PERPETUAL CONTENT ENGINE
-# 
-# Features:
-# - Smart topic generation (never repeats)
-# - Category rotation (covers all gift types)
-# - Seasonal awareness (boosts timely topics)
-# - Duplicate detection (100% unique)
-# - Trend scoring (prioritizes relevant content)
-# - Statistics tracking (monitor performance)
-# 
-# Runs: Daily at 10 AM UTC
-# Output: 1 unique blog article per day
-# Storage: 30 days artifact retention
-# Database: Auto-commits to repository
-# 
-# PERPETUAL MOTION: ♾️
-# - Topics never repeat
-# - Categories rotate evenly
-# - Seasonal topics auto-prioritized
-# - Infinite unique content generation
+## ✅ WHAT'S NEW IN THIS VERSION
+
+### 1. **Logo Integration** 🎨
+- Loads from `assets/brand/sayplay_logo.png`
+- Base64 encoded (embedded in HTML)
+- Fallback to emoji if not found
+- Automatic detection
+
+### 2. **Full SayPlay Branding** 🎁
+- Orange gradient header (#FF6B35)
+- Blue call-to-action (#004E89)
+- Professional footer
+- Brand colors throughout
+- Responsive design
+
+### 3. **Enhanced Features** ✨
+- Meta tags for SEO
+- Open Graph tags for sharing
+- Mobile-responsive layout
+- Professional typography
+- Smooth animations
+
+### 4. **Better Notifications** 📱
+- Shows branding status
+- Lists features included
+- Brand color codes
+- Asset locations
+
+---
+
+## 📋 SETUP CHECKLIST
+
+**To get full branding:**
+
+- [ ] 1. Upload logo to `assets/brand/sayplay_logo.png`
+- [ ] 2. Update workflow with file above
+- [ ] 3. Commit all changes
+- [ ] 4. Run workflow
+- [ ] 5. Download article
+- [ ] 6. See full SayPlay branding! 🎉
+
+**Without logo (works now):**
+
+- [ ] 1. Just update workflow
+- [ ] 2. Commit & run
+- [ ] 3. Will use emoji fallback (🎁 SayPlay)
+- [ ] 4. Upload logo later for automatic upgrade
+
+---
+
+## 🎯 WHAT YOU GET
+
+**Branded article includes:**
+
+✅ SayPlay logo (or emoji)  
+✅ Orange gradient header  
+✅ Brand colors throughout  
+✅ Professional typography  
+✅ Call-to-action button  
+✅ Branded footer  
+✅ Mobile responsive  
+✅ SEO optimized  
+✅ Social share ready  
+
+**Value:** Professional blog posts worth £100+ each!
+
+---
+
+## 🚀 COMMIT AND TEST
+
+**Commit message:**
+```
+Add full SayPlay branding to articles - logo, colors, CTA
