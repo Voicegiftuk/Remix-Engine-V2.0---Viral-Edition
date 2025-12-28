@@ -284,14 +284,3 @@ async def test_pinterest():
 
 if __name__ == "__main__":
     asyncio.run(test_pinterest())
-```
-
-**THAT'S IT! Nothing else! No markdown, no instructions, just code!**
-
----
-
-## Commit and Test
-
-**Commit message:**
-```
-Fix Pinterest publisher - clean Python only
