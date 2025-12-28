@@ -1,9 +1,9 @@
 # ============================================
-# TITAN REQUIREMENTS (Working)
+# TITAN REQUIREMENTS (NEW GOOGLE SDK)
 # ============================================
 
-# Core AI - OLD PACKAGE (stable and working)
-google-generativeai>=0.3.0
+# NEW Google AI SDK (replaces deprecated google-generativeai)
+google-genai>=1.0.0
 
 # HTTP & APIs
 requests>=2.31.0
@@ -23,8 +23,6 @@ python-slugify>=8.0.0
 pytz>=2023.3
 
 # ============================================
-# NOTES:
-# - Using google-generativeai (old stable package)
-# - No loguru needed (built-in Logger class)
-# - All tested and working
+# CRITICAL: Using NEW google-genai package
+# Old google-generativeai is DEPRECATED
 # ============================================
