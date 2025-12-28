@@ -1,28 +1,29 @@
-name: Daily Titan Content (Blog + Pinterest)
+name: Daily Titan Content (Intelligent + Perpetual)
 
 on:
-  # Schedule: Daily at 10 AM UTC (between video runs)
   schedule:
-    - cron: '0 10 * * *'
+    - cron: '0 10 * * *'  # Daily at 10 AM UTC
   
-  # Manual trigger
   workflow_dispatch:
     inputs:
-      content_type:
-        description: 'What to generate'
+      force_category:
+        description: 'Force specific category (optional)'
         required: false
-        default: 'blog'
         type: choice
         options:
-          - 'blog'
-          - 'pinterest-test'
-          - 'both'
+          - 'auto'
+          - 'birthday'
+          - 'wedding'
+          - 'anniversary'
+          - 'christmas'
+          - 'mothers day'
+          - 'fathers day'
 
 jobs:
-  generate-blog:
-    name: Generate Blog Article
+  generate-intelligent-content:
+    name: Generate Intelligent Blog Article
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     
     steps:
       # ============================================
@@ -31,6 +32,9 @@ jobs:
       
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -46,6 +50,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements_titan.txt
+          echo "✓ Dependencies installed"
       
       # ============================================
       # CONFIGURATION
@@ -58,34 +63,158 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          # Create .env for Titan
           cat > .env << EOF
           GEMINI_API_KEY=${GEMINI_API_KEY}
           PINTEREST_TOKEN=${PINTEREST_TOKEN}
           TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
           TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
           EOF
-          
-          echo "✓ Titan environment configured"
+          echo "✓ Environment configured"
       
       # ============================================
-      # BLOG GENERATION
+      # INTELLIGENT CONTENT GENERATION
       # ============================================
       
-      - name: Generate blog article
+      - name: Generate intelligent blog article
         id: blog
         run: |
-          echo "📝 Generating blog article..."
-          python titan_modules/blog/writer/article_generator.py
+          echo "🧠 Generating intelligent content..."
           
-          # Extract article title
-          if [ -f "test_article.html" ]; then
-            TITLE=$(grep -oP '<h1>\K[^<]+' test_article.html 2>/dev/null || echo "Blog Article")
-            echo "article_title=${TITLE}" >> $GITHUB_OUTPUT
-            echo "✅ Article generated: ${TITLE}"
+          python << 'PYTHON_SCRIPT'
+          import os
+          import json
+          from pathlib import Path
+          from titan_modules.blog.intelligence.topic_generator import TopicGenerator
+          from titan_modules.blog.writer.article_generator import ArticleGenerator
+          
+          # Generate smart topic
+          print("\n🎯 Generating unique topic...")
+          topic_gen = TopicGenerator()
+          brief = topic_gen.generate_next_topic()
+          
+          print(f"\n📝 Topic selected: {brief['primary_keyword']}")
+          print(f"   Category: {brief['category']}")
+          print(f"   Trending score: {brief['trending_score']}/100")
+          
+          # Generate article
+          print(f"\n✍️  Writing article...")
+          article_gen = ArticleGenerator(os.getenv('GEMINI_API_KEY'))
+          article = article_gen.write_article(brief)
+          
+          print(f"\n✅ Article complete!")
+          print(f"   Words: {article['word_count']}")
+          print(f"   Sections: {len(article['outline'])}")
+          
+          # Save article with metadata
+          html_content = f"""<!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <meta name="description" content="{article['meta_description']}">
+              <meta name="keywords" content="{', '.join(brief['related_keywords'][:5])}">
+              <title>{article['title']}</title>
+              <style>
+                  body {{
+                      font-family: system-ui, -apple-system, sans-serif;
+                      max-width: 800px;
+                      margin: 40px auto;
+                      padding: 20px;
+                      line-height: 1.6;
+                      color: #333;
+                  }}
+                  h1 {{
+                      color: #FF6B35;
+                      font-size: 2.5em;
+                      margin-bottom: 0.5em;
+                  }}
+                  h2 {{
+                      color: #004E89;
+                      margin-top: 2em;
+                      font-size: 1.8em;
+                  }}
+                  h3 {{
+                      color: #1A659E;
+                      font-size: 1.4em;
+                  }}
+                  p {{
+                      margin: 1em 0;
+                      font-size: 1.1em;
+                  }}
+                  .meta {{
+                      color: #666;
+                      font-size: 0.9em;
+                      margin-bottom: 2em;
+                      padding: 1em;
+                      background: #f5f5f5;
+                      border-radius: 5px;
+                  }}
+              </style>
+          </head>
+          <body>
+              <div class="meta">
+                  <strong>Category:</strong> {brief['category'].title()} | 
+                  <strong>Words:</strong> {article['word_count']} | 
+                  <strong>Trending:</strong> {brief['trending_score']}/100
+              </div>
+              <h1>{article['title']}</h1>
+              {article['html']}
+              <hr>
+              <p style="text-align: center; color: #666; margin-top: 3em;">
+                  Generated by Titan Content Engine | SayPlay.co.uk
+              </p>
+          </body>
+          </html>"""
+          
+          # Save article
+          with open('test_article.html', 'w', encoding='utf-8') as f:
+              f.write(html_content)
+          
+          # Save metadata for notifications
+          metadata = {
+              'title': article['title'],
+              'keyword': brief['primary_keyword'],
+              'category': brief['category'],
+              'words': article['word_count'],
+              'trending': brief['trending_score'],
+              'related_keywords': brief['related_keywords'][:5]
+          }
+          
+          with open('article_meta.json', 'w') as f:
+              json.dump(metadata, f, indent=2)
+          
+          # Save metadata to GitHub output
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"article_title={article['title']}\n")
+              f.write(f"article_keyword={brief['primary_keyword']}\n")
+              f.write(f"article_category={brief['category']}\n")
+              f.write(f"article_words={article['word_count']}\n")
+              f.write(f"trending_score={brief['trending_score']}\n")
+          
+          print(f"\n💾 Article saved: test_article.html")
+          print(f"📊 Metadata saved: article_meta.json")
+          
+          PYTHON_SCRIPT
+          
+          echo "✅ Content generation complete"
+      
+      # ============================================
+      # PERSIST TOPIC DATABASE
+      # ============================================
+      
+      - name: Commit topic database
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Add topics database if it exists
+          if [ -f "titan_modules/blog/intelligence/topics_database.json" ]; then
+            git add titan_modules/blog/intelligence/topics_database.json
+            git diff --staged --quiet || git commit -m "Update topics database [skip ci]"
+            git push
+            echo "✅ Topics database updated"
           else
-            echo "❌ Article generation failed"
-            exit 1
+            echo "⚠️  No database to commit yet"
           fi
       
       # ============================================
@@ -97,8 +226,10 @@ jobs:
         if: success()
         with:
           name: blog-article-${{ github.run_number }}
-          path: test_article.html
-          retention-days: 7
+          path: |
+            test_article.html
+            article_meta.json
+          retention-days: 30
       
       # ============================================
       # TELEGRAM NOTIFICATION
@@ -111,12 +242,24 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           TITLE="${{ steps.blog.outputs.article_title }}"
+          KEYWORD="${{ steps.blog.outputs.article_keyword }}"
+          CATEGORY="${{ steps.blog.outputs.article_category }}"
+          WORDS="${{ steps.blog.outputs.article_words }}"
+          TRENDING="${{ steps.blog.outputs.trending_score }}"
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
-          MESSAGE="📝 New Blog Article Generated!%0A%0A"
-          MESSAGE="${MESSAGE}📰 Title: ${TITLE}%0A%0A"
-          MESSAGE="${MESSAGE}⬇️ Download: ${DOWNLOAD_URL}%0A%0A"
-          MESSAGE="${MESSAGE}💡 Next: Create Pinterest pin with product photo"
+          MESSAGE="🧠 Intelligent Content Generated!%0A%0A"
+          MESSAGE="${MESSAGE}📰 <b>${TITLE}</b>%0A%0A"
+          MESSAGE="${MESSAGE}🎯 Keyword: ${KEYWORD}%0A"
+          MESSAGE="${MESSAGE}📁 Category: ${CATEGORY}%0A"
+          MESSAGE="${MESSAGE}📊 Words: ${WORDS}%0A"
+          MESSAGE="${MESSAGE}🔥 Trending: ${TRENDING}/100%0A%0A"
+          MESSAGE="${MESSAGE}⬇️ <a href='${DOWNLOAD_URL}'>Download Article</a>%0A%0A"
+          MESSAGE="${MESSAGE}💡 <b>Next Steps:</b>%0A"
+          MESSAGE="${MESSAGE}1️⃣ Download article%0A"
+          MESSAGE="${MESSAGE}2️⃣ Create product photo%0A"
+          MESSAGE="${MESSAGE}3️⃣ Create Pinterest pin%0A%0A"
+          MESSAGE="${MESSAGE}🤖 <i>Perpetual content - never repeats!</i>"
           
           curl -s -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
@@ -126,10 +269,14 @@ jobs:
           
           echo "✅ Notification sent to Telegram"
 
+  # ============================================
+  # PINTEREST CONNECTION TEST
+  # ============================================
+
   test-pinterest:
     name: Test Pinterest Connection
     runs-on: ubuntu-latest
-    needs: generate-blog
+    needs: generate-intelligent-content
     if: success()
     timeout-minutes: 5
     
@@ -160,8 +307,6 @@ jobs:
         run: |
           echo "📌 Testing Pinterest connection..."
           python titan_modules/distribution/publishers/pinterest_publisher.py
-          
-          echo "✅ Pinterest ready for pin creation"
           echo "pinterest_status=ready" >> $GITHUB_OUTPUT
       
       - name: Notify Pinterest status
@@ -170,18 +315,66 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          MESSAGE="📌 Pinterest Status: READY%0A%0A"
+          MESSAGE="📌 <b>Pinterest Status: READY</b>%0A%0A"
           MESSAGE="${MESSAGE}✅ API connection verified%0A"
-          MESSAGE="${MESSAGE}💡 Ready to create pins manually%0A%0A"
-          MESSAGE="${MESSAGE}Next steps:%0A"
-          MESSAGE="${MESSAGE}1. Download blog article from GitHub%0A"
-          MESSAGE="${MESSAGE}2. Create product photo%0A"
-          MESSAGE="${MESSAGE}3. Create Pinterest pin with article link"
+          MESSAGE="${MESSAGE}✅ Ready to create pins%0A%0A"
+          MESSAGE="${MESSAGE}📸 <b>Pin Creation Guide:</b>%0A"
+          MESSAGE="${MESSAGE}1. Use product photo (1000x1500px)%0A"
+          MESSAGE="${MESSAGE}2. Add SayPlay branding%0A"
+          MESSAGE="${MESSAGE}3. Copy article title%0A"
+          MESSAGE="${MESSAGE}4. Link to SayPlay.co.uk%0A"
+          MESSAGE="${MESSAGE}5. Publish to relevant board"
           
           curl -s -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode="HTML" \
             -d text="${MESSAGE}"
+
+  # ============================================
+  # CONTENT STATISTICS
+  # ============================================
+
+  show-stats:
+    name: Show Content Statistics
+    runs-on: ubuntu-latest
+    needs: generate-intelligent-content
+    if: success()
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Display statistics
+        run: |
+          python << 'PYTHON_SCRIPT'
+          import json
+          from pathlib import Path
+          
+          db_file = Path('titan_modules/blog/intelligence/topics_database.json')
+          
+          if db_file.exists():
+              with open(db_file, 'r') as f:
+                  db = json.load(f)
+              
+              print("\n" + "=" * 60)
+              print("📊 TITAN CONTENT ENGINE - STATISTICS")
+              print("=" * 60)
+              print(f"\n📈 Total Articles: {db['stats']['total_generated']}")
+              print(f"\n📁 By Category:")
+              for cat, count in sorted(db['stats']['by_category'].items(), 
+                                       key=lambda x: x[1], reverse=True):
+                  print(f"   {cat.title()}: {count}")
+              print("\n" + "=" * 60)
+          else:
+              print("\n📊 First article - statistics will build over time!")
+          
+          PYTHON_SCRIPT
 
   # ============================================
   # FAILURE NOTIFICATION
@@ -190,7 +383,7 @@ jobs:
   notify-failure:
     name: Notify on Failure
     runs-on: ubuntu-latest
-    needs: [generate-blog, test-pinterest]
+    needs: [generate-intelligent-content, test-pinterest]
     if: failure()
     
     steps:
@@ -199,24 +392,38 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          MESSAGE="⚠️ <b>Titan Workflow Failed!</b>%0A%0A"
+          MESSAGE="${MESSAGE}❌ Content generation encountered an error%0A%0A"
+          MESSAGE="${MESSAGE}🔍 <a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>View Logs</a>%0A%0A"
+          MESSAGE="${MESSAGE}💡 Check GitHub Actions for details"
+          
           curl -s -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d text="⚠️ Titan workflow failed!%0A%0ACheck GitHub Actions: https://github.com/${{ github.repository }}/actions"
+            -d parse_mode="HTML" \
+            -d text="${MESSAGE}"
 
 # ============================================
 # WORKFLOW METADATA
 # ============================================
 
-# This workflow:
-# - Runs daily at 10 AM UTC
-# - Generates 1 blog article (SEO-optimized)
-# - Tests Pinterest connection
-# - Sends article to Telegram
-# - Notifies when ready for manual pin creation
-#
-# SAFE MODE:
-# - No automated Pinterest posting (requires images)
-# - Manual pin creation (5 min/day)
-# - Download article from GitHub Artifacts
-# - Zero ban risk
+# INTELLIGENT PERPETUAL CONTENT ENGINE
+# 
+# Features:
+# - Smart topic generation (never repeats)
+# - Category rotation (covers all gift types)
+# - Seasonal awareness (boosts timely topics)
+# - Duplicate detection (100% unique)
+# - Trend scoring (prioritizes relevant content)
+# - Statistics tracking (monitor performance)
+# 
+# Runs: Daily at 10 AM UTC
+# Output: 1 unique blog article per day
+# Storage: 30 days artifact retention
+# Database: Auto-commits to repository
+# 
+# PERPETUAL MOTION: ♾️
+# - Topics never repeat
+# - Categories rotate evenly
+# - Seasonal topics auto-prioritized
+# - Infinite unique content generation
