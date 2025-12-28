@@ -313,15 +313,3 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         exit(1)
-And update requirements_titan.txt:
-txt# Use OLD package (still works better)
-google-generativeai>=0.3.0
-
-# Core dependencies
-requests>=2.31.0
-python-dotenv>=1.0.0
-beautifulsoup4>=4.12.0
-lxml>=4.9.0
-Pillow>=10.0.0
-aiohttp>=3.9.0
-python-slugify>=8.0.0
