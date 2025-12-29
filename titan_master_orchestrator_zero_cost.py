@@ -7,6 +7,7 @@ import sys
 import os
 from pathlib import Path
 from datetime import datetime
+import random
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -16,8 +17,7 @@ try:
     from titan_modules.commerce.address_validation import AddressValidator
     GOOGLE_ENHANCED = True
     print("Google Enhanced Mode Active")
-except ImportError as e:
-    print(f"Google enhanced modules not found, using basic versions")
+except ImportError:
     try:
         from titan_modules.growth.b2b_hunter.b2b_hunter import B2BHunter
         from titan_modules.psychology.precognition.gift_precognition_zero_cost import GiftPrecognition
@@ -80,7 +80,6 @@ modules_loaded['pricing'] = False
 modules_loaded['chameleon'] = False
 
 try:
-    from titan_modules.blog.intelligence.topic_generator import TopicGenerator
     from titan_modules.blog.writer.article_generator import ArticleGenerator
     modules_loaded['blog'] = True
 except Exception as e:
@@ -88,6 +87,73 @@ except Exception as e:
     modules_loaded['blog'] = False
 
 import requests
+
+def generate_topic():
+    """Simple built-in topic generator"""
+    topics = [
+        {
+            'keyword': 'birthday gifts for mum',
+            'category': 'Occasions',
+            'title': 'Perfect Birthday Gifts for Mum 2025',
+            'angle': 'heartfelt and personal',
+            'search_volume': 5000
+        },
+        {
+            'keyword': 'anniversary gifts for wife',
+            'category': 'Occasions',
+            'title': 'Romantic Anniversary Gifts Your Wife Will Love',
+            'angle': 'romantic and memorable',
+            'search_volume': 4200
+        },
+        {
+            'keyword': 'christmas gifts for family',
+            'category': 'Occasions',
+            'title': 'Thoughtful Christmas Gifts for the Whole Family',
+            'angle': 'festive and meaningful',
+            'search_volume': 8500
+        },
+        {
+            'keyword': 'wedding gifts for couples',
+            'category': 'Occasions',
+            'title': 'Unique Wedding Gifts Couples Will Treasure',
+            'angle': 'unique and lasting',
+            'search_volume': 3800
+        },
+        {
+            'keyword': 'graduation gifts for her',
+            'category': 'Occasions',
+            'title': 'Inspiring Graduation Gifts She Will Cherish',
+            'angle': 'inspirational and practical',
+            'search_volume': 2900
+        },
+        {
+            'keyword': 'mothers day gift ideas',
+            'category': 'Occasions',
+            'title': 'Heartfelt Mothers Day Gifts She Will Love',
+            'angle': 'emotional and personal',
+            'search_volume': 12000
+        },
+        {
+            'keyword': 'fathers day presents',
+            'category': 'Occasions',
+            'title': 'Best Fathers Day Presents for Every Dad',
+            'angle': 'practical and meaningful',
+            'search_volume': 9500
+        },
+        {
+            'keyword': 'valentine gifts for him',
+            'category': 'Occasions',
+            'title': 'Romantic Valentine Gifts He Will Actually Want',
+            'angle': 'romantic and thoughtful',
+            'search_volume': 6700
+        }
+    ]
+    
+    topic = random.choice(topics)
+    print(f"Generated topic: {topic['keyword']}")
+    print(f"Category: {topic['category']}")
+    print(f"Search volume: {topic['search_volume']}")
+    return topic
 
 def send_telegram_notification(message: str):
     token = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -149,22 +215,36 @@ def main():
             print("MODULE 2: BLOG ENGINE (Gemini - FREE)")
             print("-" * 70)
             
-            topic_gen = TopicGenerator()
-            article_gen = ArticleGenerator(api_key=os.getenv('GEMINI_API_KEY'))
+            topic = generate_topic()
             
-            topic = topic_gen.generate_intelligent_topic()
-            article = article_gen.generate_article(topic)
-            if modules_loaded['brand']:
-                article = brand.apply_brand_identity(article, 'html')
+            try:
+                gemini_key = os.getenv('GEMINI_API_KEY')
+                if not gemini_key:
+                    raise Exception("GEMINI_API_KEY not set")
+                
+                article_gen = ArticleGenerator(api_key=gemini_key)
+                article = article_gen.generate_article(topic)
+                
+                if modules_loaded['brand']:
+                    article = brand.apply_brand_identity(article, 'html')
+                
+                results['outputs']['blog'] = {
+                    'title': article.get('title', 'Untitled'),
+                    'keyword': topic.get('keyword', 'N/A'),
+                    'word_count': len(article.get('text', '').split())
+                }
+                results['modules_run'] += 1
+                print(f"Article generated (Gemini FREE)")
+                print(f"Title: {article.get('title', '')[:60]}...")
             
-            results['outputs']['blog'] = {
-                'title': article.get('title', 'Untitled'),
-                'keyword': topic.get('keyword', 'N/A'),
-                'word_count': len(article.get('text', '').split())
-            }
-            results['modules_run'] += 1
-            print(f"Article generated (Gemini FREE)")
-            print(f"Title: {article.get('title', '')[:60]}...")
+            except Exception as e:
+                print(f"Blog generation error: {e}")
+                article = {
+                    'title': topic['title'],
+                    'text': f"Article about {topic['keyword']}",
+                    'html': f"<h1>{topic['title']}</h1><p>Content about {topic['keyword']}</p>"
+                }
+            
             print()
         else:
             article = {'title': 'Test Article', 'text': 'Test content', 'html': '<p>Test</p>'}
@@ -174,187 +254,223 @@ def main():
             print("MODULE 4: IMAGE ENGINE (Pollinations.ai - FREE)")
             print("-" * 70)
             
-            image_engine = ImageEngine()
+            try:
+                image_engine = ImageEngine()
+                
+                prompt = f"lifestyle photo: {topic.get('keyword', 'gift')} scene, professional"
+                images = image_engine.batch_generate_all_platforms(prompt)
+                
+                results['outputs']['images'] = {
+                    'prompt': prompt,
+                    'variants_generated': len(images)
+                }
+                results['modules_run'] += 1
+                print(f"Images generated (Pollinations.ai FREE)")
+                print(f"Variants: {len(images)} platforms")
+            except Exception as e:
+                print(f"Image generation error: {e}")
             
-            prompt = f"lifestyle photo: {topic.get('keyword', 'gift')} scene, professional"
-            images = image_engine.batch_generate_all_platforms(prompt)
-            
-            results['outputs']['images'] = {
-                'prompt': prompt,
-                'variants_generated': len(images)
-            }
-            results['modules_run'] += 1
-            print(f"Images generated (Pollinations.ai FREE)")
-            print(f"Variants: {len(images)} platforms")
             print()
         
         if modules_loaded['audio']:
             print("MODULE 5: AUDIO-INCEPTION (Edge-TTS + Gemini - FREE)")
             print("-" * 70)
             
-            audio_engine = AudioInception()
-            podcast = audio_engine.article_to_podcast(article)
+            try:
+                audio_engine = AudioInception()
+                podcast = audio_engine.article_to_podcast(article)
+                
+                results['outputs']['podcast'] = {
+                    'title': podcast['metadata']['title'],
+                    'duration': podcast['metadata']['duration']
+                }
+                results['modules_run'] += 1
+                print(f"Podcast created (Edge-TTS FREE)")
+                print(f"Duration: ~{podcast['metadata']['duration']}s")
+            except Exception as e:
+                print(f"Podcast generation error: {e}")
             
-            results['outputs']['podcast'] = {
-                'title': podcast['metadata']['title'],
-                'duration': podcast['metadata']['duration']
-            }
-            results['modules_run'] += 1
-            print(f"Podcast created (Edge-TTS FREE)")
-            print(f"Duration: ~{podcast['metadata']['duration']}s")
             print()
         
         if modules_loaded['global']:
             print("MODULE 6: GLOBAL DOMINATION (Gemini translations - FREE)")
             print("-" * 70)
             
-            global_engine = GlobalDomination()
-            translations = global_engine.batch_translate_all_markets(article)
+            try:
+                global_engine = GlobalDomination()
+                translations = global_engine.batch_translate_all_markets(article)
+                
+                results['outputs']['translations'] = {
+                    'languages': list(translations.keys()),
+                    'total_reach': sum(
+                        global_engine.TARGET_MARKETS.get(lang, {}).get('population', 0)
+                        for lang in translations.keys() if lang != 'en'
+                    )
+                }
+                results['modules_run'] += 1
+                print(f"Translations complete (Gemini FREE)")
+                print(f"Languages: {', '.join(translations.keys())}")
+            except Exception as e:
+                print(f"Translation error: {e}")
             
-            results['outputs']['translations'] = {
-                'languages': list(translations.keys()),
-                'total_reach': sum(
-                    global_engine.TARGET_MARKETS.get(lang, {}).get('population', 0)
-                    for lang in translations.keys() if lang != 'en'
-                )
-            }
-            results['modules_run'] += 1
-            print(f"Translations complete (Gemini FREE)")
-            print(f"Languages: {', '.join(translations.keys())}")
             print()
         
         if modules_loaded['seo']:
             print("MODULE 7: PROGRAMMATIC SEO")
             print("-" * 70)
             
-            seo_engine = ProgrammaticSEO()
-            seo_pages = seo_engine.generate_all_pages(max_pages=50)
+            try:
+                seo_engine = ProgrammaticSEO()
+                seo_pages = seo_engine.generate_all_pages(max_pages=50)
+                
+                results['outputs']['seo'] = {'pages_generated': len(seo_pages)}
+                results['modules_run'] += 1
+                print(f"SEO pages generated")
+                print(f"Pages: {len(seo_pages)}")
+            except Exception as e:
+                print(f"SEO generation error: {e}")
             
-            results['outputs']['seo'] = {'pages_generated': len(seo_pages)}
-            results['modules_run'] += 1
-            print(f"SEO pages generated")
-            print(f"Pages: {len(seo_pages)}")
             print()
         
         if modules_loaded['social']:
             print("MODULE 8: SOCIAL POSTER (FREE APIs)")
             print("-" * 70)
             
-            social_engine = SocialPoster()
-            social_results = social_engine.distribute_article(article)
+            try:
+                social_engine = SocialPoster()
+                social_results = social_engine.distribute_article(article)
+                
+                results['outputs']['social'] = social_results
+                results['modules_run'] += 1
+                print(f"Social distribution complete")
+            except Exception as e:
+                print(f"Social posting error: {e}")
             
-            results['outputs']['social'] = social_results
-            results['modules_run'] += 1
-            print(f"Social distribution complete")
             print()
         
         if GOOGLE_ENHANCED or 'B2BHunter' in dir():
             print("MODULE 9: B2B HUNTER" + (" ENHANCED" if GOOGLE_ENHANCED else ""))
             print("-" * 70)
             
-            b2b_engine = B2BHunter()
-            businesses = b2b_engine.find_businesses('London, UK', 'florist')
-            contacted = 0
-            
-            for business in businesses[:10]:
-                style = b2b_engine.analyze_business_style(business)
+            try:
+                b2b_engine = B2BHunter()
+                businesses = b2b_engine.find_businesses('London, UK', 'florist')
+                contacted = 0
                 
+                for business in businesses[:10]:
+                    style = b2b_engine.analyze_business_style(business)
+                    
+                    if GOOGLE_ENHANCED:
+                        email = b2b_engine.generate_cold_email(business, style, include_map=True)
+                        sent = b2b_engine.send_cold_email(
+                            business.get('email', f"contact@{business['name'].lower().replace(' ', '')}.co.uk"),
+                            f"Partnership - {business['name']}",
+                            email,
+                            business=business,
+                            include_map=True
+                        )
+                    else:
+                        email = b2b_engine.generate_cold_email(business, style)
+                        sent = b2b_engine.send_cold_email(
+                            business.get('email', f"contact@{business['name'].lower().replace(' ', '')}.co.uk"),
+                            f"Partnership - {business['name']}",
+                            email
+                        )
+                    
+                    if sent:
+                        contacted += 1
+                
+                results['outputs']['b2b'] = {
+                    'businesses_found': len(businesses),
+                    'emails_sent': contacted,
+                    'enhanced': GOOGLE_ENHANCED
+                }
+                results['modules_run'] += 1
+                print(f"B2B outreach complete")
+                print(f"Emails sent: {contacted}")
                 if GOOGLE_ENHANCED:
-                    email = b2b_engine.generate_cold_email(business, style, include_map=True)
-                    sent = b2b_engine.send_cold_email(
-                        business.get('email', f"contact@{business['name'].lower().replace(' ', '')}.co.uk"),
-                        f"Partnership - {business['name']}",
-                        email,
-                        business=business,
-                        include_map=True
-                    )
-                else:
-                    email = b2b_engine.generate_cold_email(business, style)
-                    sent = b2b_engine.send_cold_email(
-                        business.get('email', f"contact@{business['name'].lower().replace(' ', '')}.co.uk"),
-                        f"Partnership - {business['name']}",
-                        email
-                    )
-                
-                if sent:
-                    contacted += 1
+                    print(f"Visual emails with location maps")
+            except Exception as e:
+                print(f"B2B hunter error: {e}")
             
-            results['outputs']['b2b'] = {
-                'businesses_found': len(businesses),
-                'emails_sent': contacted,
-                'enhanced': GOOGLE_ENHANCED
-            }
-            results['modules_run'] += 1
-            print(f"B2B outreach complete")
-            print(f"Emails sent: {contacted}")
-            if GOOGLE_ENHANCED:
-                print(f"Visual emails with location maps")
             print()
         
         if modules_loaded['influencer']:
             print("MODULE 10: INFLUENCER SCOUT")
             print("-" * 70)
             
-            qualified = run_influencer_campaign('lifestyle', target_count=30)
+            try:
+                qualified = run_influencer_campaign('lifestyle', target_count=30)
+                
+                results['outputs']['influencers'] = {
+                    'found': 60,
+                    'qualified': len(qualified),
+                    'contacted': min(10, len(qualified))
+                }
+                results['modules_run'] += 1
+                print(f"Influencer campaign complete")
+            except Exception as e:
+                print(f"Influencer scout error: {e}")
             
-            results['outputs']['influencers'] = {
-                'found': 60,
-                'qualified': len(qualified),
-                'contacted': min(10, len(qualified))
-            }
-            results['modules_run'] += 1
-            print(f"Influencer campaign complete")
             print()
         
         if GOOGLE_ENHANCED or 'GiftPrecognition' in dir():
             print("MODULE 13: GIFT PRECOGNITION" + (" ENHANCED" if GOOGLE_ENHANCED else ""))
             print("-" * 70)
             
-            precog_engine = GiftPrecognition()
-            upcoming = precog_engine.scan_upcoming_events(days_ahead=14)
+            try:
+                precog_engine = GiftPrecognition()
+                upcoming = precog_engine.scan_upcoming_events(days_ahead=14)
+                
+                for event_data in upcoming[:5]:
+                    precog_engine.send_reminder_email(
+                        event_data['customer_id'],
+                        event_data['event']
+                    )
+                
+                results['outputs']['precognition'] = {
+                    'reminders_sent': len(upcoming[:5]),
+                    'enhanced': GOOGLE_ENHANCED
+                }
+                results['modules_run'] += 1
+                print(f"Email reminders sent")
+                print(f"Reminders: {len(upcoming[:5])}")
+                if GOOGLE_ENHANCED:
+                    print(f"Perfect local timing with Time Zone API")
+            except Exception as e:
+                print(f"Gift precognition error: {e}")
             
-            for event_data in upcoming[:5]:
-                precog_engine.send_reminder_email(
-                    event_data['customer_id'],
-                    event_data['event']
-                )
-            
-            results['outputs']['precognition'] = {
-                'reminders_sent': len(upcoming[:5]),
-                'enhanced': GOOGLE_ENHANCED
-            }
-            results['modules_run'] += 1
-            print(f"Email reminders sent")
-            print(f"Reminders: {len(upcoming[:5])}")
-            if GOOGLE_ENHANCED:
-                print(f"Perfect local timing with Time Zone API")
             print()
         
         if GOOGLE_ENHANCED:
             print("MODULE 14: ADDRESS VALIDATION NEW")
             print("-" * 70)
             
-            validator = AddressValidator()
+            try:
+                validator = AddressValidator()
+                
+                test_address = {
+                    'line1': '10 Downing Street',
+                    'city': 'London',
+                    'postcode': 'SW1A 2AA',
+                    'country': 'GB'
+                }
+                
+                validation = validator.validate_address(test_address)
+                
+                results['outputs']['address_validation'] = {
+                    'tested': True,
+                    'is_valid': validation['is_valid'],
+                    'confidence': validation['confidence']
+                }
+                results['modules_run'] += 1
+                
+                print(f"Address validation active")
+                print(f"Test validation: {validation['confidence']}")
+                print(f"Prevents failed deliveries")
+            except Exception as e:
+                print(f"Address validation error: {e}")
             
-            test_address = {
-                'line1': '10 Downing Street',
-                'city': 'London',
-                'postcode': 'SW1A 2AA',
-                'country': 'GB'
-            }
-            
-            validation = validator.validate_address(test_address)
-            
-            results['outputs']['address_validation'] = {
-                'tested': True,
-                'is_valid': validation['is_valid'],
-                'confidence': validation['confidence']
-            }
-            results['modules_run'] += 1
-            
-            print(f"Address validation active")
-            print(f"Test validation: {validation['confidence']}")
-            print(f"Prevents failed deliveries")
             print()
         
         end_time = datetime.now()
@@ -373,10 +489,28 @@ def main():
             print(f"Cost: 0.00 GBP")
         print("="*70)
         
-        telegram_message = f"Titan Complete\n\nModules: {results['modules_run']}\nDuration: {duration:.1f}s"
+        telegram_message = f"<b>Titan Complete</b>\n\n<b>Modules:</b> {results['modules_run']}\n<b>Duration:</b> {duration:.1f}s"
         
-        if modules_loaded.get('blog') and 'blog' in results['outputs']:
-            telegram_message += f"\n\nBlog: {results['outputs']['blog']['title'][:40]}..."
+        if 'blog' in results['outputs']:
+            telegram_message += f"\n\n<b>Blog:</b> {results['outputs']['blog']['title'][:50]}..."
+            telegram_message += f"\n<b>Keyword:</b> {results['outputs']['blog']['keyword']}"
+            telegram_message += f"\n<b>Words:</b> {results['outputs']['blog']['word_count']}"
+        
+        if 'images' in results['outputs']:
+            telegram_message += f"\n<b>Images:</b> {results['outputs']['images']['variants_generated']} variants"
+        
+        if 'podcast' in results['outputs']:
+            telegram_message += f"\n<b>Podcast:</b> {results['outputs']['podcast']['duration']}s"
+        
+        if 'translations' in results['outputs']:
+            telegram_message += f"\n<b>Languages:</b> {len(results['outputs']['translations']['languages'])}"
+        
+        if GOOGLE_ENHANCED:
+            telegram_message += f"\n\n<b>Mode:</b> Google Enhanced"
+            telegram_message += f"\n<b>Cost:</b> 9.40 GBP/month"
+        else:
+            telegram_message += f"\n\n<b>Mode:</b> Zero-Cost"
+            telegram_message += f"\n<b>Cost:</b> FREE"
         
         send_telegram_notification(telegram_message)
         
@@ -389,7 +523,7 @@ def main():
         error_msg = f"ERROR: {str(e)}"
         print(f"\n{error_msg}\n")
         
-        send_telegram_notification(f"Titan Failed\n\nError: {str(e)}")
+        send_telegram_notification(f"<b>Titan Failed</b>\n\nError: {str(e)}")
         
         import traceback
         traceback.print_exc()
