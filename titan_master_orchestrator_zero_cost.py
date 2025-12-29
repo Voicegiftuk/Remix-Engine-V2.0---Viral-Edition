@@ -2,18 +2,6 @@
 """
 TITAN MASTER ORCHESTRATOR - ENHANCED VERSION
 Uses FREE APIs + Google Maps (with $200 FREE credit!)
-
-FREE APIs:
-- Pollinations.ai - FREE images
-- Gemini - FREE text/translations
-- Edge-TTS - FREE voices
-- SendGrid - FREE emails (100/day)
-
-Google Maps APIs (£9.40/mc from FREE $200 credit):
-- Places API (New) - Find businesses
-- Maps Static API - Visual emails
-- Time Zone API - Perfect timing
-- Address Validation API - Prevent returns
 """
 import sys
 import os
@@ -43,7 +31,7 @@ try:
     from titan_modules.content.audio_inception.audio_inception_zero_cost import AudioInception
     from titan_modules.expansion.global_domination.global_domination_zero_cost import GlobalDomination
     from titan_modules.expansion.programmatic_seo.programmatic_seo import ProgrammaticSEO
-    from titan_modules.distribution.social_poster.social_poster import SocialPoster
+    from titan_modules.distribution.social_poster import SocialPoster  # ✅ FIXED!
     from titan_modules.growth.influencer_scout.influencer_scout import InfluencerScout, run_influencer_campaign
     from titan_modules.psychology.neuro_pricing.neuro_pricing import NeuroPricing
     from titan_modules.psychology.chameleon.chameleon_landing import ChameleonEngine
@@ -98,9 +86,7 @@ def main():
     }
     
     try:
-        # ============================================================
         # MODULE #1: BRAND IDENTITY
-        # ============================================================
         print("1️⃣  BRAND IDENTITY CORE")
         print("-" * 70)
         
@@ -113,9 +99,7 @@ def main():
         print(f"   Infringements: {len(infringements)}")
         print()
         
-        # ============================================================
         # MODULE #2: BLOG ENGINE
-        # ============================================================
         print("2️⃣  BLOG ENGINE (Gemini - FREE)")
         print("-" * 70)
         
@@ -136,9 +120,7 @@ def main():
         print(f"   Title: {article.get('title', '')[:60]}...")
         print()
         
-        # ============================================================
-        # MODULE #4: IMAGE ENGINE (Pollinations.ai - FREE)
-        # ============================================================
+        # MODULE #4: IMAGE ENGINE
         print("4️⃣  IMAGE ENGINE (Pollinations.ai - FREE)")
         print("-" * 70)
         
@@ -156,9 +138,7 @@ def main():
         print(f"   Variants: {len(images)} platforms")
         print()
         
-        # ============================================================
-        # MODULE #5: AUDIO-INCEPTION (Edge-TTS + Gemini - FREE)
-        # ============================================================
+        # MODULE #5: AUDIO-INCEPTION
         print("5️⃣  AUDIO-INCEPTION (Edge-TTS + Gemini - FREE)")
         print("-" * 70)
         
@@ -174,9 +154,7 @@ def main():
         print(f"   Duration: ~{podcast['metadata']['duration']}s")
         print()
         
-        # ============================================================
-        # MODULE #6: GLOBAL DOMINATION (Gemini - FREE)
-        # ============================================================
+        # MODULE #6: GLOBAL DOMINATION
         print("6️⃣  GLOBAL DOMINATION (Gemini translations - FREE)")
         print("-" * 70)
         
@@ -195,9 +173,7 @@ def main():
         print(f"   Languages: {', '.join(translations.keys())}")
         print()
         
-        # ============================================================
         # MODULE #7: PROGRAMMATIC SEO
-        # ============================================================
         print("7️⃣  PROGRAMMATIC SEO")
         print("-" * 70)
         
@@ -210,9 +186,7 @@ def main():
         print(f"   Pages: {len(seo_pages)}")
         print()
         
-        # ============================================================
         # MODULE #8: SOCIAL POSTER
-        # ============================================================
         print("8️⃣  SOCIAL POSTER (FREE APIs)")
         print("-" * 70)
         
@@ -224,9 +198,7 @@ def main():
         print(f"✅ Social distribution complete")
         print()
         
-        # ============================================================
-        # MODULE #9: B2B HUNTER (Enhanced with Google Maps!)
-        # ============================================================
+        # MODULE #9: B2B HUNTER
         print("9️⃣  B2B HUNTER" + (" ✨ ENHANCED" if GOOGLE_ENHANCED else ""))
         print("-" * 70)
         
@@ -237,26 +209,17 @@ def main():
         for business in businesses[:10]:
             style = b2b_engine.analyze_business_style(business)
             
-            # Generate email WITH MAP if enhanced version available
             if GOOGLE_ENHANCED:
-                email = b2b_engine.generate_cold_email(
-                    business, 
-                    style,
-                    include_map=True  # ✨ Maps in emails!
-                )
-            else:
-                email = b2b_engine.generate_cold_email(business, style)
-            
-            # Send email
-            if GOOGLE_ENHANCED:
+                email = b2b_engine.generate_cold_email(business, style, include_map=True)
                 sent = b2b_engine.send_cold_email(
                     business.get('email', f"contact@{business['name'].lower().replace(' ', '')}.co.uk"),
                     f"Partnership - {business['name']}",
                     email,
                     business=business,
-                    include_map=True  # ✨ Embedded map!
+                    include_map=True
                 )
             else:
+                email = b2b_engine.generate_cold_email(business, style)
                 sent = b2b_engine.send_cold_email(
                     business.get('email', f"contact@{business['name'].lower().replace(' ', '')}.co.uk"),
                     f"Partnership - {business['name']}",
@@ -278,9 +241,7 @@ def main():
             print(f"   ✨ Visual emails with location maps!")
         print()
         
-        # ============================================================
         # MODULE #10: INFLUENCER SCOUT
-        # ============================================================
         print("🔟 INFLUENCER SCOUT")
         print("-" * 70)
         
@@ -295,9 +256,7 @@ def main():
         print(f"✅ Influencer campaign complete")
         print()
         
-        # ============================================================
         # MODULE #11: NEURO-PRICING
-        # ============================================================
         print("1️⃣1️⃣  NEURO-PRICING")
         print("-" * 70)
         
@@ -308,9 +267,7 @@ def main():
         print(f"✅ Pricing engine active")
         print()
         
-        # ============================================================
         # MODULE #12: CHAMELEON LANDING
-        # ============================================================
         print("1️⃣2️⃣  CHAMELEON LANDING")
         print("-" * 70)
         
@@ -319,16 +276,14 @@ def main():
         print(f"✅ Chameleon landing active")
         print()
         
-        # ============================================================
-        # MODULE #13: GIFT PRECOGNITION (Enhanced with Time Zones!)
-        # ============================================================
+        # MODULE #13: GIFT PRECOGNITION
         print("1️⃣3️⃣  GIFT PRECOGNITION" + (" ✨ ENHANCED" if GOOGLE_ENHANCED else ""))
         print("-" * 70)
         
         precog_engine = GiftPrecognition()
         upcoming = precog_engine.scan_upcoming_events(days_ahead=14)
         
-        for event_data in upcoming[:5]:  # Limit to 5/day
+        for event_data in upcoming[:5]:
             precog_engine.send_reminder_email(
                 event_data['customer_id'],
                 event_data['event']
@@ -345,16 +300,13 @@ def main():
             print(f"   ✨ Perfect local timing with Time Zone API!")
         print()
         
-        # ============================================================
-        # MODULE #14: ADDRESS VALIDATION (NEW! Google Enhanced only)
-        # ============================================================
+        # MODULE #14: ADDRESS VALIDATION
         if GOOGLE_ENHANCED:
             print("1️⃣4️⃣  ADDRESS VALIDATION ✨ NEW!")
             print("-" * 70)
             
             validator = AddressValidator()
             
-            # Example: Validate test address
             test_address = {
                 'line1': '10 Downing Street',
                 'city': 'London',
@@ -376,9 +328,7 @@ def main():
             print(f"   ✨ Prevents failed deliveries!")
             print()
         
-        # ============================================================
         # FINAL SUMMARY
-        # ============================================================
         end_time = datetime.now()
         duration = (end_time - results['start_time']).total_seconds()
         
