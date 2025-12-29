@@ -150,7 +150,7 @@ def main():
             print("-" * 70)
             
             topic_gen = TopicGenerator()
-            article_gen = ArticleGenerator()
+            article_gen = ArticleGenerator(api_key=os.getenv('GEMINI_API_KEY'))
             
             topic = topic_gen.generate_intelligent_topic()
             article = article_gen.generate_article(topic)
