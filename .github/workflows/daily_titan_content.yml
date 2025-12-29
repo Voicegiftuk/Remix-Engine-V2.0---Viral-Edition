@@ -6,22 +6,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  titan-enhanced-complete:
-    name: Titan Enhanced System
+  titan-enhanced:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       
       - name: Install dependencies
         run: |
@@ -29,7 +25,7 @@ jobs:
           pip install -r requirements_titan.txt
           pip install edge-tts
       
-      - name: Run Enhanced Titan System
+      - name: Run Titan System
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -38,47 +34,21 @@ jobs:
           PINTEREST_ACCESS_TOKEN: ${{ secrets.PINTEREST_ACCESS_TOKEN }}
           PINTEREST_BOARD_ID: ${{ secrets.PINTEREST_BOARD_ID }}
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
-        run: |
-          echo "Starting Enhanced Titan System..."
-          python titan_master_orchestrator_zero_cost.py
+        run: python titan_master_orchestrator_zero_cost.py
       
-      - name: Commit database updates
+      - name: Commit updates
         if: success()
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          if [ -f "titan_modules/blog/intelligence/topics_database.json" ]; then
-            git add titan_modules/blog/intelligence/topics_database.json
-            git diff --staged --quiet || git commit -m "Update topics [skip ci]"
-            git push || echo "Nothing to push"
-          fi
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          git add -A
+          git diff --staged --quiet || git commit -m "Update [skip ci]"
+          git push || true
       
-      - name: Send success notification
+      - name: Success notification
         if: success()
-        run: |
-          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" -d text="✅ Enhanced Titan completed successfully!"
+        run: curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} -d text="✅ Titan complete!"
       
-      - name: Send failure notification
+      - name: Failure notification
         if: failure()
-        run: |
-          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" -d text="❌ Enhanced Titan failed! Check Actions tab."
-      
-      - name: Upload failure logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: titan-error-logs
-          path: |
-            *.log
-            *.json
-          retention-days: 7
-          if-no-files-found: ignore
-```
-
----
-
-## 🚀 JAK UŻYĆ
-
-### **KROK 1: Otwórz plik**
-```
-GitHub → .github/workflows/daily_titan_content.yml
+        run: curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} -d text="❌ Titan failed!"
