@@ -31,7 +31,7 @@ try:
     from titan_modules.content.audio_inception.audio_inception_zero_cost import AudioInception
     from titan_modules.expansion.global_domination.global_domination_zero_cost import GlobalDomination
     from titan_modules.expansion.programmatic_seo.programmatic_seo import ProgrammaticSEO
-    from titan_modules.distribution.social_poster import SocialPoster  # ✅ FIXED!
+    from titan_modules.distribution.social_poster import SocialPoster
     from titan_modules.growth.influencer_scout.influencer_scout import InfluencerScout, run_influencer_campaign
     from titan_modules.psychology.neuro_pricing.neuro_pricing import NeuroPricing
     from titan_modules.psychology.chameleon.chameleon_landing import ChameleonEngine
