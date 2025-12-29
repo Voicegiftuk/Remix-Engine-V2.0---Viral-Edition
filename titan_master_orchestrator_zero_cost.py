@@ -8,18 +8,16 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-# Add modules to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-# Import ENHANCED versions (with Google Maps fallback to basic)
 try:
     from titan_modules.growth.b2b_hunter.b2b_hunter_enhanced import B2BHunter
     from titan_modules.psychology.precognition.gift_precognition_enhanced import GiftPrecognition
     from titan_modules.commerce.address_validation import AddressValidator
     GOOGLE_ENHANCED = True
-    print("✨ Google Enhanced Mode Active")
+    print("Google Enhanced Mode Active")
 except ImportError as e:
-    print(f"⚠️  Google enhanced modules not found, using basic versions")
+    print(f"Google enhanced modules not found, using basic versions")
     try:
         from titan_modules.growth.b2b_hunter.b2b_hunter import B2BHunter
         from titan_modules.psychology.precognition.gift_precognition_zero_cost import GiftPrecognition
@@ -27,59 +25,57 @@ except ImportError as e:
         pass
     GOOGLE_ENHANCED = False
 
-# Import ZERO-COST versions with error handling
 modules_loaded = {}
 
 try:
     from titan_modules.foundation.brand_identity.brand_identity_core import BrandIdentityCore
     modules_loaded['brand'] = True
 except Exception as e:
-    print(f"⚠️  Brand Identity not loaded: {e}")
+    print(f"Brand Identity not loaded: {e}")
     modules_loaded['brand'] = False
 
 try:
     from titan_modules.content.image_engine.image_engine_zero_cost import ImageEngine
     modules_loaded['images'] = True
 except Exception as e:
-    print(f"⚠️  Image Engine not loaded: {e}")
+    print(f"Image Engine not loaded: {e}")
     modules_loaded['images'] = False
 
 try:
     from titan_modules.content.audio_inception.audio_inception_zero_cost import AudioInception
     modules_loaded['audio'] = True
 except Exception as e:
-    print(f"⚠️  Audio Inception not loaded: {e}")
+    print(f"Audio Inception not loaded: {e}")
     modules_loaded['audio'] = False
 
 try:
     from titan_modules.expansion.global_domination.global_domination_zero_cost import GlobalDomination
     modules_loaded['global'] = True
 except Exception as e:
-    print(f"⚠️  Global Domination not loaded: {e}")
+    print(f"Global Domination not loaded: {e}")
     modules_loaded['global'] = False
 
 try:
     from titan_modules.expansion.programmatic_seo.programmatic_seo import ProgrammaticSEO
     modules_loaded['seo'] = True
 except Exception as e:
-    print(f"⚠️  Programmatic SEO not loaded: {e}")
+    print(f"Programmatic SEO not loaded: {e}")
     modules_loaded['seo'] = False
 
 try:
     from titan_modules.distribution.social_poster import SocialPoster
     modules_loaded['social'] = True
 except Exception as e:
-    print(f"⚠️  Social Poster not loaded: {e}")
+    print(f"Social Poster not loaded: {e}")
     modules_loaded['social'] = False
 
 try:
     from titan_modules.growth.influencer_scout.influencer_scout import InfluencerScout, run_influencer_campaign
     modules_loaded['influencer'] = True
 except Exception as e:
-    print(f"⚠️  Influencer Scout not loaded: {e}")
+    print(f"Influencer Scout not loaded: {e}")
     modules_loaded['influencer'] = False
 
-# Skip neuro_pricing and chameleon for now (have Path errors)
 modules_loaded['pricing'] = False
 modules_loaded['chameleon'] = False
 
@@ -88,18 +84,17 @@ try:
     from titan_modules.blog.writer.article_generator import ArticleGenerator
     modules_loaded['blog'] = True
 except Exception as e:
-    print(f"⚠️  Blog modules not loaded: {e}")
+    print(f"Blog modules not loaded: {e}")
     modules_loaded['blog'] = False
 
 import requests
 
 def send_telegram_notification(message: str):
-    """Send notification to Telegram"""
     token = os.getenv('TELEGRAM_BOT_TOKEN')
     chat_id = os.getenv('TELEGRAM_CHAT_ID')
     
     if not token or not chat_id:
-        print("⚠️  Telegram not configured")
+        print("Telegram not configured")
         return
     
     try:
@@ -107,29 +102,27 @@ def send_telegram_notification(message: str):
         data = {'chat_id': chat_id, 'text': message, 'parse_mode': 'HTML'}
         requests.post(url, data=data, timeout=10)
     except Exception as e:
-        print(f"⚠️  Telegram failed: {e}")
+        print(f"Telegram failed: {e}")
 
 
 def main():
-    """Run Enhanced Titan automation"""
-    
     mode_name = "ENHANCED" if GOOGLE_ENHANCED else "ZERO-COST"
     
     print("\n" + "="*70)
-    print(f"🚀 TITAN MASTER ORCHESTRATOR - {mode_name} MODE")
+    print(f"TITAN MASTER ORCHESTRATOR - {mode_name} MODE")
     print("="*70)
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}")
     if GOOGLE_ENHANCED:
-        print("💰 Monthly Cost: £9.40 (Google APIs with FREE $200 credit)")
-        print("✨ Enhanced Features: Visual Emails, Perfect Timing, Address Validation")
+        print("Monthly Cost: 9.40 GBP (Google APIs with FREE $200 credit)")
+        print("Enhanced Features: Visual Emails, Perfect Timing, Address Validation")
     else:
-        print("💰 Monthly Cost: £0.00")
+        print("Monthly Cost: 0.00 GBP")
     print("="*70 + "\n")
     
-    print("📦 Modules Loaded:")
+    print("Modules Loaded:")
     for module, loaded in modules_loaded.items():
-        status = "✅" if loaded else "⚠️ "
-        print(f"   {status} {module}")
+        status = "OK" if loaded else "SKIP"
+        print(f"   [{status}] {module}")
     print()
     
     results = {
@@ -139,9 +132,8 @@ def main():
     }
     
     try:
-        # MODULE #1: BRAND IDENTITY
         if modules_loaded['brand']:
-            print("1️⃣  BRAND IDENTITY CORE")
+            print("MODULE 1: BRAND IDENTITY CORE")
             print("-" * 70)
             
             brand = BrandIdentityCore()
@@ -149,13 +141,12 @@ def main():
             
             results['outputs']['brand'] = {'infringements_detected': len(infringements)}
             results['modules_run'] += 1
-            print(f"✅ Brand protection active")
-            print(f"   Infringements: {len(infringements)}")
+            print(f"Brand protection active")
+            print(f"Infringements: {len(infringements)}")
             print()
         
-        # MODULE #2: BLOG ENGINE
         if modules_loaded['blog']:
-            print("2️⃣  BLOG ENGINE (Gemini - FREE)")
+            print("MODULE 2: BLOG ENGINE (Gemini - FREE)")
             print("-" * 70)
             
             topic_gen = TopicGenerator()
@@ -172,16 +163,15 @@ def main():
                 'word_count': len(article.get('text', '').split())
             }
             results['modules_run'] += 1
-            print(f"✅ Article generated (Gemini FREE)")
-            print(f"   Title: {article.get('title', '')[:60]}...")
+            print(f"Article generated (Gemini FREE)")
+            print(f"Title: {article.get('title', '')[:60]}...")
             print()
         else:
             article = {'title': 'Test Article', 'text': 'Test content', 'html': '<p>Test</p>'}
             topic = {'keyword': 'gifts'}
         
-        # MODULE #4: IMAGE ENGINE
         if modules_loaded['images']:
-            print("4️⃣  IMAGE ENGINE (Pollinations.ai - FREE)")
+            print("MODULE 4: IMAGE ENGINE (Pollinations.ai - FREE)")
             print("-" * 70)
             
             image_engine = ImageEngine()
@@ -194,13 +184,12 @@ def main():
                 'variants_generated': len(images)
             }
             results['modules_run'] += 1
-            print(f"✅ Images generated (Pollinations.ai FREE)")
-            print(f"   Variants: {len(images)} platforms")
+            print(f"Images generated (Pollinations.ai FREE)")
+            print(f"Variants: {len(images)} platforms")
             print()
         
-        # MODULE #5: AUDIO-INCEPTION
         if modules_loaded['audio']:
-            print("5️⃣  AUDIO-INCEPTION (Edge-TTS + Gemini - FREE)")
+            print("MODULE 5: AUDIO-INCEPTION (Edge-TTS + Gemini - FREE)")
             print("-" * 70)
             
             audio_engine = AudioInception()
@@ -211,13 +200,12 @@ def main():
                 'duration': podcast['metadata']['duration']
             }
             results['modules_run'] += 1
-            print(f"✅ Podcast created (Edge-TTS FREE)")
-            print(f"   Duration: ~{podcast['metadata']['duration']}s")
+            print(f"Podcast created (Edge-TTS FREE)")
+            print(f"Duration: ~{podcast['metadata']['duration']}s")
             print()
         
-        # MODULE #6: GLOBAL DOMINATION
         if modules_loaded['global']:
-            print("6️⃣  GLOBAL DOMINATION (Gemini translations - FREE)")
+            print("MODULE 6: GLOBAL DOMINATION (Gemini translations - FREE)")
             print("-" * 70)
             
             global_engine = GlobalDomination()
@@ -231,13 +219,12 @@ def main():
                 )
             }
             results['modules_run'] += 1
-            print(f"✅ Translations complete (Gemini FREE)")
-            print(f"   Languages: {', '.join(translations.keys())}")
+            print(f"Translations complete (Gemini FREE)")
+            print(f"Languages: {', '.join(translations.keys())}")
             print()
         
-        # MODULE #7: PROGRAMMATIC SEO
         if modules_loaded['seo']:
-            print("7️⃣  PROGRAMMATIC SEO")
+            print("MODULE 7: PROGRAMMATIC SEO")
             print("-" * 70)
             
             seo_engine = ProgrammaticSEO()
@@ -245,13 +232,12 @@ def main():
             
             results['outputs']['seo'] = {'pages_generated': len(seo_pages)}
             results['modules_run'] += 1
-            print(f"✅ SEO pages generated")
-            print(f"   Pages: {len(seo_pages)}")
+            print(f"SEO pages generated")
+            print(f"Pages: {len(seo_pages)}")
             print()
         
-        # MODULE #8: SOCIAL POSTER
         if modules_loaded['social']:
-            print("8️⃣  SOCIAL POSTER (FREE APIs)")
+            print("MODULE 8: SOCIAL POSTER (FREE APIs)")
             print("-" * 70)
             
             social_engine = SocialPoster()
@@ -259,12 +245,11 @@ def main():
             
             results['outputs']['social'] = social_results
             results['modules_run'] += 1
-            print(f"✅ Social distribution complete")
+            print(f"Social distribution complete")
             print()
         
-        # MODULE #9: B2B HUNTER
         if GOOGLE_ENHANCED or 'B2BHunter' in dir():
-            print("9️⃣  B2B HUNTER" + (" ✨ ENHANCED" if GOOGLE_ENHANCED else ""))
+            print("MODULE 9: B2B HUNTER" + (" ENHANCED" if GOOGLE_ENHANCED else ""))
             print("-" * 70)
             
             b2b_engine = B2BHunter()
@@ -300,15 +285,14 @@ def main():
                 'enhanced': GOOGLE_ENHANCED
             }
             results['modules_run'] += 1
-            print(f"✅ B2B outreach complete")
-            print(f"   Emails sent: {contacted}")
+            print(f"B2B outreach complete")
+            print(f"Emails sent: {contacted}")
             if GOOGLE_ENHANCED:
-                print(f"   ✨ Visual emails with location maps!")
+                print(f"Visual emails with location maps")
             print()
         
-        # MODULE #10: INFLUENCER SCOUT
         if modules_loaded['influencer']:
-            print("🔟 INFLUENCER SCOUT")
+            print("MODULE 10: INFLUENCER SCOUT")
             print("-" * 70)
             
             qualified = run_influencer_campaign('lifestyle', target_count=30)
@@ -319,12 +303,11 @@ def main():
                 'contacted': min(10, len(qualified))
             }
             results['modules_run'] += 1
-            print(f"✅ Influencer campaign complete")
+            print(f"Influencer campaign complete")
             print()
         
-        # MODULE #13: GIFT PRECOGNITION
         if GOOGLE_ENHANCED or 'GiftPrecognition' in dir():
-            print("1️⃣3️⃣  GIFT PRECOGNITION" + (" ✨ ENHANCED" if GOOGLE_ENHANCED else ""))
+            print("MODULE 13: GIFT PRECOGNITION" + (" ENHANCED" if GOOGLE_ENHANCED else ""))
             print("-" * 70)
             
             precog_engine = GiftPrecognition()
@@ -341,15 +324,14 @@ def main():
                 'enhanced': GOOGLE_ENHANCED
             }
             results['modules_run'] += 1
-            print(f"✅ Email reminders sent")
-            print(f"   Reminders: {len(upcoming[:5])}")
+            print(f"Email reminders sent")
+            print(f"Reminders: {len(upcoming[:5])}")
             if GOOGLE_ENHANCED:
-                print(f"   ✨ Perfect local timing with Time Zone API!")
+                print(f"Perfect local timing with Time Zone API")
             print()
         
-        # MODULE #14: ADDRESS VALIDATION
         if GOOGLE_ENHANCED:
-            print("1️⃣4️⃣  ADDRESS VALIDATION ✨ NEW!")
+            print("MODULE 14: ADDRESS VALIDATION NEW")
             print("-" * 70)
             
             validator = AddressValidator()
@@ -370,46 +352,44 @@ def main():
             }
             results['modules_run'] += 1
             
-            print(f"✅ Address validation active")
-            print(f"   Test validation: {validation['confidence']}")
-            print(f"   ✨ Prevents failed deliveries!")
+            print(f"Address validation active")
+            print(f"Test validation: {validation['confidence']}")
+            print(f"Prevents failed deliveries")
             print()
         
-        # FINAL SUMMARY
         end_time = datetime.now()
         duration = (end_time - results['start_time']).total_seconds()
         
         print("\n" + "="*70)
-        print(f"🎉 {'ENHANCED' if GOOGLE_ENHANCED else 'ZERO-COST'} TITAN COMPLETE!")
+        print(f"TITAN COMPLETE - {mode_name} MODE")
         print("="*70)
         print(f"Duration: {duration:.1f}s")
         print(f"Modules run: {results['modules_run']}")
         if GOOGLE_ENHANCED:
-            print(f"Mode: Google Enhanced ✨")
-            print(f"💰 Cost: £9.40/mc")
+            print(f"Mode: Google Enhanced")
+            print(f"Cost: 9.40 GBP/month")
         else:
             print(f"Mode: Zero-Cost")
-            print(f"💰 Cost: £0.00")
+            print(f"Cost: 0.00 GBP")
         print("="*70)
         
-        # Telegram notification
-        telegram_message = f"✅ Titan Complete!\n\nModules: {results['modules_run']}\nDuration: {duration:.1f}s"
+        telegram_message = f"Titan Complete\n\nModules: {results['modules_run']}\nDuration: {duration:.1f}s"
         
         if modules_loaded.get('blog') and 'blog' in results['outputs']:
             telegram_message += f"\n\nBlog: {results['outputs']['blog']['title'][:40]}..."
         
         send_telegram_notification(telegram_message)
         
-        print("\n✅ Telegram notification sent!")
+        print("\nTelegram notification sent")
         print("\n" + "="*70 + "\n")
         
         return 0
         
     except Exception as e:
-        error_msg = f"❌ ERROR: {str(e)}"
+        error_msg = f"ERROR: {str(e)}"
         print(f"\n{error_msg}\n")
         
-        send_telegram_notification(f"❌ Titan Failed!\n\nError: {str(e)}")
+        send_telegram_notification(f"Titan Failed\n\nError: {str(e)}")
         
         import traceback
         traceback.print_exc()
@@ -420,31 +400,3 @@ def main():
 if __name__ == "__main__":
     exit_code = main()
     sys.exit(exit_code)
-```
-
----
-
-## 🎯 TO JEST DEFENSIVE VERSION
-
-**Co robi inaczej:**
-- ✅ Każdy moduł ma try/except
-- ✅ Jeśli moduł nie załaduje się = skip
-- ✅ System działa z tym co ma
-- ✅ Na końcu pokazuje ile modułów działało
-
-**Rezultat:**
-```
-📦 Modules Loaded:
-   ✅ brand
-   ✅ images
-   ✅ audio
-   ✅ global
-   ✅ seo
-   ✅ social
-   ✅ influencer
-   ⚠️  pricing (skipped - has error)
-   ⚠️  chameleon (skipped - has error)
-   ✅ blog
-
-Modules run: 10/14
-✅ System works with what's available!
