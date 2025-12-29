@@ -1,101 +1,71 @@
-name: Titan Complete Enhanced System
+name: Daily Titan Content Enhanced
 
 on:
-  # Daily automation at 10:00 AM UTC
   schedule:
     - cron: '0 10 * * *'
-  
-  # Manual trigger button (Run workflow)
   workflow_dispatch:
 
 jobs:
-  titan_enhanced_automation:
-    name: Run Enhanced Titan System
+  titan-enhanced-complete:
+    name: Titan Enhanced System
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
     steps:
-      # ============================================================
-      # STEP 1: Checkout code
-      # ============================================================
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
-      # ============================================================
-      # STEP 2: Setup Python
-      # ============================================================
-      - name: 🐍 Setup Python 3.11
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       
-      # ============================================================
-      # STEP 3: Install ALL dependencies
-      # ============================================================
-      - name: 📦 Install dependencies
+      - name: Install dependencies
         run: |
-          echo "Installing Python packages..."
           pip install --upgrade pip
-          pip install google-generativeai requests beautifulsoup4 pillow python-dotenv python-slugify pytz edge-tts
-          echo "✅ All dependencies installed"
+          pip install -r requirements_titan.txt
+          pip install edge-tts
       
-      # ============================================================
-      # STEP 4: Run Enhanced Titan Orchestrator
-      # ============================================================
-      - name: 🚀 Run Enhanced Titan System
+      - name: Run Enhanced Titan System
         env:
-          # Core APIs (FREE)
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          
-          # Communication (FREE tier)
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
-          
-          # Social Media (FREE)
           PINTEREST_ACCESS_TOKEN: ${{ secrets.PINTEREST_ACCESS_TOKEN }}
           PINTEREST_BOARD_ID: ${{ secrets.PINTEREST_BOARD_ID }}
-          PINTEREST_TOKEN: ${{ secrets.PINTEREST_TOKEN }}
-          
-          # Google Maps APIs (Enhanced Features - $200 FREE credit)
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: |
-          echo "🚀 Starting Enhanced Titan System..."
-          echo "Mode: Enhanced with Google Maps APIs"
-          echo "Time: $(date)"
-          echo ""
+          echo "Starting Enhanced Titan System..."
           python titan_master_orchestrator_zero_cost.py
       
-      # ============================================================
-      # STEP 5: Success notification
-      # ============================================================
-      - name: ✅ Send success notification
+      - name: Commit database updates
         if: success()
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "text=✅ Titan Enhanced workflow completed successfully! Check main notification for details." \
-            -d "parse_mode=HTML"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          if [ -f "titan_modules/blog/intelligence/topics_database.json" ]; then
+            git add titan_modules/blog/intelligence/topics_database.json
+            git diff --staged --quiet || git commit -m "Update topics [skip ci]"
+            git push || echo "Nothing to push"
+          fi
       
-      # ============================================================
-      # STEP 6: Failure notification
-      # ============================================================
-      - name: ❌ Send failure notification
+      - name: Send success notification
+        if: success()
+        run: |
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" -d text="✅ Enhanced Titan completed successfully!"
+      
+      - name: Send failure notification
         if: failure()
         run: |
-          WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "text=❌ Titan Enhanced workflow failed!%0A%0ACheck logs: ${WORKFLOW_URL}" \
-            -d "parse_mode=HTML"
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" -d text="❌ Enhanced Titan failed! Check Actions tab."
       
-      # ============================================================
-      # STEP 7: Upload logs on failure (for debugging)
-      # ============================================================
-      - name: 📋 Upload failure logs
+      - name: Upload failure logs
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: titan-error-logs
           path: |
@@ -107,192 +77,8 @@ jobs:
 
 ---
 
-## 🚀 JAK DODAĆ TEN WORKFLOW
+## 🚀 JAK UŻYĆ
 
-### **METODA 1: Przez GitHub UI (Łatwiejsza)**
-
-1. **GitHub → Twoje repo**
-
-2. **Navigate:**
+### **KROK 1: Otwórz plik**
 ```
-   .github/workflows/
-```
-
-3. **Create new file:**
-   - Click "Add file" → "Create new file"
-   - Name: `titan_complete_enhanced.yml`
-   - Paste kod z góry
-   - Commit: "Add complete enhanced Titan workflow"
-
-**DONE! ✅**
-
----
-
-### **METODA 2: Replace istniejącego pliku**
-
-1. **GitHub → `.github/workflows/daily_titan_content.yml`**
-
-2. **Edit file:**
-   - Click "Edit" (ołówek)
-   - Delete wszystko
-   - Paste kod z góry
-   - Commit: "Update to complete enhanced workflow"
-
-**DONE! ✅**
-
----
-
-## 🎯 CO TEN WORKFLOW ROBI
-
-### **Automatycznie (codziennie):**
-```
-⏰ 10:00 AM UTC każdego dnia:
-  ↓
-✅ Checkout code
-✅ Setup Python 3.11
-✅ Install all dependencies
-✅ Run titan_master_orchestrator_zero_cost.py
-✅ Send Telegram notification
-```
-
-### **Manual (kiedy chcesz):**
-```
-👆 Click "Run workflow" button:
-  ↓
-✅ Same process natychmiast!
-```
-
-### **Error handling:**
-```
-❌ Jeśli coś fail:
-  ↓
-✅ Telegram notification z linkiem do logs
-✅ Upload error logs (można pobrać)
-✅ Easy debugging
-```
-
----
-
-## 📊 CO DOKŁADNIE URUCHOMI
-
-**Ten workflow uruchomi:**
-```
-TITAN MASTER ORCHESTRATOR - ENHANCED MODE
-├── Module #1: Brand Identity
-├── Module #2: Blog Engine (Gemini FREE)
-├── Module #4: Image Engine (Pollinations FREE)
-├── Module #5: Audio-Inception (Edge-TTS FREE)
-├── Module #6: Global Domination (Gemini FREE)
-├── Module #7: Programmatic SEO
-├── Module #8: Social Poster
-├── Module #9: B2B Hunter ✨ ENHANCED
-│   └── with location maps!
-├── Module #10: Influencer Scout
-├── Module #11: Neuro-Pricing
-├── Module #12: Chameleon Landing
-├── Module #13: Gift Precognition ✨ ENHANCED
-│   └── with timezone awareness!
-└── Module #14: Address Validation ✨ NEW
-    └── prevents failed deliveries!
-
-📱 Telegram notification with full summary
-```
-
----
-
-## ✅ VERIFICATION CHECKLIST
-
-**Po dodaniu workflow, sprawdź:**
-
-### **☐ Workflow visible:**
-- [ ] GitHub → Actions tab
-- [ ] See "Titan Complete Enhanced System" w liście
-
-### **☐ Manual trigger available:**
-- [ ] Click na workflow
-- [ ] See "Run workflow" button (dropdown)
-- [ ] ✅ = Ready to run!
-
-### **☐ Schedule active:**
-- [ ] Workflow będzie działać daily o 10:00 UTC
-- [ ] Check: "This workflow has a workflow_dispatch event trigger"
-
----
-
-## 🚀 FIRST RUN - STEP BY STEP
-
-### **1. Znajdź workflow (1 min):**
-```
-GitHub → Actions → "Titan Complete Enhanced System"
-```
-
-### **2. Kliknij Run (5 sekund):**
-```
-Right side: "Run workflow" dropdown
-Click: "Run workflow" green button
-```
-
-### **3. Watch progress (12 min):**
-```
-Żółte kółko = Running...
-Zielony checkmark = SUCCESS! ✅
-Czerwony X = Failed ❌
-```
-
-### **4. Check Telegram (instant):**
-```
-Po 12 minutach:
-📱 "✅ ENHANCED TITAN COMPLETE ✨"
-+ Detailed summary
-```
-
-### **5. Verify logs (2 min):**
-```
-Click na run
-Expand steps
-See all output
-```
-
----
-
-## 💰 KOSZTY
-
-**Z tym workflow:**
-```
-FREE APIs:
-✅ Pollinations.ai (images)     £0
-✅ Gemini (text/translations)   £0
-✅ Edge-TTS (voices)            £0
-✅ SendGrid (100 emails/day)    £0
-
-Google APIs (from $200 FREE credit):
-✅ Places API                   ~$0.32/day
-✅ Maps Static API              ~$0.06/day
-✅ Time Zone API                ~$0.05/day
-✅ Address Validation           ~$0.05/day
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TOTAL:                          ~$0.50/day = £9.40/month
-FREE CREDIT:                    $200/month
-REMAINING:                      $185/month unused! 🎉
-```
-
----
-
-## 🎊 COMPARE: Old vs New
-
-### **OLD (Multiple workflows, confusion):**
-```
-❌ daily_titan_content.yml
-❌ safe_daily_content.yml
-❌ Które wybrać?
-❌ Które ma co?
-❌ Confusion!
-```
-
-### **NEW (One workflow, wszystko):**
-```
-✅ titan_complete_enhanced.yml
-✅ All features
-✅ All APIs
-✅ Clear & simple
-✅ Just click Run!
+GitHub → .github/workflows/daily_titan_content.yml
