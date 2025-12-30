@@ -1,157 +1,138 @@
 """
-SPOTIFY PODCASTERS AUTO-UPLOAD
-Automatically uploads all generated podcasts to Spotify
+PODCAST RSS FEED GENERATOR
+Creates Apple Podcasts / Spotify compatible RSS feed
 """
-import os
-import requests
 from pathlib import Path
-import json
 from datetime import datetime
-import base64
+import json
+from xml.etree.ElementTree import Element, SubElement, tostring
+from xml.dom import minidom
 
 
-class SpotifyPodcastUploader:
+class PodcastRSSGenerator:
     """
-    Upload podcasts to Spotify for Podcasters
+    Generate podcast RSS feed for Apple/Spotify/Google
     """
     
     def __init__(self):
-        self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
-        self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
-        self.show_id = os.getenv('SPOTIFY_SHOW_ID')
-        self.access_token = None
-    
-    def authenticate(self):
-        """Get access token from Spotify"""
-        print("🔐 Authenticating with Spotify...")
-        
-        auth_string = f"{self.client_id}:{self.client_secret}"
-        auth_bytes = auth_string.encode('utf-8')
-        auth_base64 = base64.b64encode(auth_bytes).decode('utf-8')
-        
-        url = "https://accounts.spotify.com/api/token"
-        headers = {
-            "Authorization": f"Basic {auth_base64}",
-            "Content-Type": "application/x-www-form-urlencoded"
+        self.show_info = {
+            'title': 'SayPlay Gift Guide',
+            'description': 'Your daily guide to finding the perfect personalized gifts. Discover unique ideas, expert tips, and the magic of voice message gifts with SayPlay.',
+            'author': 'SayPlay - VoiceGift UK',
+            'email': 'podcast@sayplay.co.uk',
+            'website': 'https://sayplay.co.uk',
+            'image': 'https://sayplay.co.uk/podcast-cover.jpg',
+            'category': 'Leisure',
+            'subcategory': 'Hobbies',
+            'language': 'en-GB',
+            'copyright': '2025 VoiceGift UK Ltd',
+            'explicit': 'no'
         }
-        data = {"grant_type": "client_credentials"}
-        
-        response = requests.post(url, headers=headers, data=data)
-        
-        if response.status_code == 200:
-            self.access_token = response.json()['access_token']
-            print("✅ Authenticated successfully")
-            return True
-        else:
-            print(f"❌ Authentication failed: {response.status_code}")
-            return False
     
-    def upload_episode(self, audio_file: Path, metadata: dict):
-        """Upload single episode to Spotify"""
-        print(f"\n📤 Uploading: {metadata['title']}...")
+    def generate_rss(self, podcast_dir: Path, output_file: Path):
+        """Generate complete RSS feed"""
         
-        # Spotify Podcasters API endpoint
-        url = f"https://api.spotify.com/v1/shows/{self.show_id}/episodes"
+        print("\n🎙 Generating podcast RSS feed...")
         
-        headers = {
-            "Authorization": f"Bearer {self.access_token}",
-            "Content-Type": "multipart/form-data"
-        }
+        # Create RSS structure
+        rss = Element('rss', {
+            'version': '2.0',
+            'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd',
+            'xmlns:content': 'http://purl.org/rss/1.0/modules/content/',
+            'xmlns:atom': 'http://www.w3.org/2005/Atom'
+        })
         
-        # Prepare episode data
-        episode_data = {
-            "name": metadata['title'],
-            "description": metadata.get('description', ''),
-            "release_date": datetime.now().strftime('%Y-%m-%d'),
-            "language": "en-GB",
-            "explicit": False
-        }
+        channel = SubElement(rss, 'channel')
         
-        # Upload audio file
-        with open(audio_file, 'rb') as f:
-            files = {'file': (audio_file.name, f, 'audio/mpeg')}
+        # Add channel info
+        self._add_element(channel, 'title', self.show_info['title'])
+        self._add_element(channel, 'description', self.show_info['description'])
+        self._add_element(channel, 'link', self.show_info['website'])
+        self._add_element(channel, 'language', self.show_info['language'])
+        
+        # iTunes tags
+        self._add_element(channel, 'itunes:author', self.show_info['author'])
+        self._add_element(channel, 'itunes:summary', self.show_info['description'])
+        
+        # Add episodes
+        episodes = self._get_episodes(podcast_dir)
+        
+        for episode in episodes:
+            item = SubElement(channel, 'item')
             
-            response = requests.post(
-                url, 
-                headers=headers, 
-                data=episode_data, 
-                files=files
-            )
+            self._add_element(item, 'title', episode['title'])
+            self._add_element(item, 'description', episode['description'])
+            
+            SubElement(item, 'enclosure', {
+                'url': episode['audio_url'],
+                'length': str(episode['file_size']),
+                'type': 'audio/mpeg'
+            })
+            
+            self._add_element(item, 'pubDate', episode['pub_date'])
         
-        if response.status_code in [200, 201]:
-            episode_id = response.json().get('id')
-            episode_url = f"https://open.spotify.com/episode/{episode_id}"
-            print(f"✅ Uploaded successfully")
-            print(f"   URL: {episode_url}")
-            return episode_url
-        else:
-            print(f"❌ Upload failed: {response.status_code}")
-            print(f"   Response: {response.text}")
-            return None
+        # Pretty print XML
+        xml_string = minidom.parseString(tostring(rss, 'utf-8')).toprettyxml(indent='  ')
+        
+        # Save
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(xml_string)
+        
+        print(f"✅ RSS feed generated: {output_file}")
+        
+        return output_file
     
-    def upload_all_podcasts(self, podcast_dir: Path):
-        """Upload all podcasts from directory"""
-        print("\n🎙 Starting Spotify upload...")
+    def _get_episodes(self, podcast_dir: Path) -> list:
+        """Get all podcast episodes"""
+        episodes = []
         
-        if not self.authenticate():
-            print("❌ Cannot upload without authentication")
-            return []
+        mp3_files = sorted(podcast_dir.glob('*_PODCAST.mp3'))
         
-        uploaded = []
-        
-        # Find all podcast files
-        podcast_files = list(podcast_dir.glob('*.mp3'))
-        
-        for podcast_file in podcast_files:
-            # Load metadata
-            meta_file = podcast_file.with_suffix('.json')
-            if meta_file.exists():
-                with open(meta_file, 'r') as f:
-                    metadata = json.load(f)
-            else:
-                metadata = {
-                    'title': podcast_file.stem.replace('-', ' ').title()
-                }
+        for i, mp3_file in enumerate(mp3_files, 1):
+            file_size = mp3_file.stat().st_size
             
-            # Upload
-            episode_url = self.upload_episode(podcast_file, metadata)
+            episode = {
+                'title': f"Episode {i}: Gift Ideas",
+                'description': f"Discover thoughtful gift ideas in episode {i}.",
+                'audio_url': f"https://sayplay.co.uk/podcasts/{mp3_file.name}",
+                'file_size': file_size,
+                'pub_date': datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+            }
             
-            if episode_url:
-                uploaded.append({
-                    'file': podcast_file.name,
-                    'url': episode_url,
-                    'title': metadata['title']
-                })
+            episodes.append(episode)
         
-        print(f"\n✅ Upload complete: {len(uploaded)}/{len(podcast_files)} successful")
-        
-        return uploaded
+        return episodes
+    
+    def _add_element(self, parent, tag, text):
+        """Helper to add element with text"""
+        elem = SubElement(parent, tag)
+        elem.text = text
+        return elem
 
 
 def main():
-    """Main upload function"""
-    # Find podcast directory
-    output_dirs = list(Path('.').glob('TITAN_OUTPUT_*/02_PODCAST'))
+    """Generate RSS feed"""
+    
+    output_dirs = sorted(Path('.').glob('TITAN_OUTPUT_*'), reverse=True)
     
     if not output_dirs:
-        print("❌ No podcast directory found")
+        print("❌ No output directory found")
         return
     
-    podcast_dir = output_dirs[0]
+    output_dir = output_dirs[0]
+    podcast_dir = output_dir / '02_PODCAST'
     
-    uploader = SpotifyPodcastUploader()
-    uploaded = uploader.upload_all_podcasts(podcast_dir)
+    if not podcast_dir.exists():
+        print("❌ Podcast directory not found")
+        return
     
-    # Save upload log
-    log_file = podcast_dir / 'spotify_upload_log.json'
-    with open(log_file, 'w') as f:
-        json.dump({
-            'upload_date': datetime.now().isoformat(),
-            'episodes_uploaded': len(uploaded),
-            'episodes': uploaded
-        }, f, indent=2)
+    web_dir = output_dir / 'web'
+    web_dir.mkdir(parents=True, exist_ok=True)
     
-    print(f"\n📝 Upload log saved: {log_file}")
+    rss_file = web_dir / 'podcast.xml'
+    
+    generator = PodcastRSSGenerator()
+    generator.generate_rss(podcast_dir, rss_file)
 
 
 if __name__ == '__main__':
