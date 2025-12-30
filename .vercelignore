@@ -1,0 +1,11 @@
+node_modules
+.git
+.env
+*.pyc
+__pycache__
+.pytest_cache
+*.log
+.DS_Store
+titan_modules/
+scripts/
+requirements_titan.txt
