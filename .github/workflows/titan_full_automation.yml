@@ -37,26 +37,92 @@ jobs:
         run: |
           python titan_master_orchestrator_v2.py
       
+      - name: Verify generated content
+        run: |
+          LATEST=$(ls -dt TITAN_OUTPUT_* | head -1)
+          
+          if [ ! -d "$LATEST" ]; then
+            echo "❌ ERROR: Output directory not found!"
+            exit 1
+          fi
+          
+          echo "✅ Output directory: $LATEST"
+          
+          # Check for required files
+          if [ ! -d "$LATEST/web/blog" ]; then
+            echo "❌ ERROR: Blog directory missing!"
+            exit 1
+          fi
+          
+          if [ ! -d "$LATEST/web/podcasts" ]; then
+            echo "❌ ERROR: Podcasts directory missing!"
+            exit 1
+          fi
+          
+          if [ ! -d "$LATEST/web/dashboard" ]; then
+            echo "❌ ERROR: Dashboard directory missing!"
+            exit 1
+          fi
+          
+          # Count files
+          BLOG_COUNT=$(find $LATEST/web/blog -name '*.html' -type f 2>/dev/null | wc -l)
+          PODCAST_COUNT=$(find $LATEST/web/podcasts -name '*.mp3' -type f 2>/dev/null | wc -l)
+          
+          echo "📊 Content Statistics:"
+          echo "  📝 Blog articles: $BLOG_COUNT"
+          echo "  🎙 Podcasts: $PODCAST_COUNT"
+          
+          if [ "$BLOG_COUNT" -eq 0 ]; then
+            echo "❌ ERROR: No blog articles generated!"
+            exit 1
+          fi
+          
+          if [ "$PODCAST_COUNT" -eq 0 ]; then
+            echo "⚠️ WARNING: No podcasts generated (Edge TTS may be unavailable)"
+          fi
+          
+          echo "✅ Content verification passed"
+      
       - name: Prepare deployment folder
         run: |
           LATEST=$(ls -dt TITAN_OUTPUT_* | head -1)
-          echo "Latest output: $LATEST"
+          echo "📦 Preparing deployment from: $LATEST"
           
-          # Copy web content to deploy folder
+          # Create deploy folder
           mkdir -p deploy
+          
+          # Copy web content
+          echo "📁 Copying web content..."
           cp -r $LATEST/web/* deploy/
           
-          # List what we're deploying
-          echo "Contents of deploy folder:"
-          ls -laR deploy/
+          # Verify deployment folder
+          echo ""
+          echo "📂 Deploy folder structure:"
+          ls -lah deploy/
           
-          echo "Total files:"
-          find deploy -type f | wc -l
+          echo ""
+          echo "📊 File counts in deploy folder:"
+          echo "  Total files: $(find deploy -type f | wc -l)"
+          echo "  Blog HTMLs: $(find deploy/blog -name '*.html' -type f 2>/dev/null | wc -l)"
+          echo "  Blog index: $([ -f deploy/blog/index.html ] && echo '✓' || echo '✗')"
+          echo "  Podcasts MP3s: $(find deploy/podcasts -name '*.mp3' -type f 2>/dev/null | wc -l)"
+          echo "  Podcasts index: $([ -f deploy/podcasts/index.html ] && echo '✓' || echo '✗')"
+          echo "  Dashboard: $([ -f deploy/dashboard/index.html ] && echo '✓' || echo '✗')"
+          echo "  RSS feed: $([ -f deploy/podcast.xml ] && echo '✓' || echo '✗')"
+          echo "  Podcast cover: $([ -f deploy/podcast-cover.jpg ] && echo '✓' || echo '✗')"
           
-          echo "File breakdown:"
-          echo "Blog articles: $(find deploy/blog -name '*.html' 2>/dev/null | wc -l)"
-          echo "SEO pages: $(find deploy/seo -name '*.html' 2>/dev/null | wc -l)"
-          echo "Podcasts: $(find deploy/podcasts -name '*.mp3' 2>/dev/null | wc -l)"
+          # Detailed file listing
+          echo ""
+          echo "📋 Detailed contents:"
+          echo ""
+          echo "Blog files:"
+          ls -lh deploy/blog/*.html 2>/dev/null | head -5 || echo "  No blog files"
+          echo ""
+          echo "Podcast files:"
+          ls -lh deploy/podcasts/*.mp3 2>/dev/null | head -5 || echo "  No podcast files"
+          echo ""
+          echo "Other files:"
+          ls -lh deploy/*.{xml,jpg} 2>/dev/null || echo "  No RSS/cover files"
       
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -67,10 +133,64 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
+          echo "🚀 Starting Vercel deployment..."
           cd deploy
+          
+          echo "📥 Pulling Vercel configuration..."
           vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+          
+          echo "🔨 Building for production..."
           vercel build --prod --token=$VERCEL_TOKEN
-          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+          
+          echo "🌐 Deploying to production..."
+          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN)
+          
+          echo "✅ Deployment complete!"
+          echo "🔗 URL: $DEPLOY_URL"
+          
+          # Save URL for later steps
+          echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
+      
+      - name: Verify deployment
+        if: success()
+        run: |
+          echo "🔍 Verifying deployment..."
+          
+          # Wait a bit for CDN
+          sleep 10
+          
+          # Check main dashboard
+          echo "Checking: https://dashboard.sayplay.co.uk"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://dashboard.sayplay.co.uk)
+          
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "✅ Dashboard is live (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️ Dashboard returned HTTP $HTTP_CODE"
+          fi
+          
+          # Check blog index
+          echo "Checking: https://dashboard.sayplay.co.uk/blog"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://dashboard.sayplay.co.uk/blog)
+          
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "✅ Blog index is live (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️ Blog index returned HTTP $HTTP_CODE"
+          fi
+          
+          # Check podcasts index
+          echo "Checking: https://dashboard.sayplay.co.uk/podcasts"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://dashboard.sayplay.co.uk/podcasts)
+          
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "✅ Podcasts index is live (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️ Podcasts index returned HTTP $HTTP_CODE"
+          fi
+          
+          echo ""
+          echo "✅ Deployment verification complete"
       
       - name: Upload artifacts
         if: always()
@@ -85,19 +205,41 @@ jobs:
         run: |
           # Count generated files
           LATEST=$(ls -dt TITAN_OUTPUT_* | head -1)
-          ARTICLES=$(find $LATEST/web/blog -name '*.html' 2>/dev/null | wc -l)
-          PODCASTS=$(find $LATEST/web/podcasts -name '*.mp3' 2>/dev/null | wc -l)
-          SEO=$(find $LATEST/web/seo -name '*.html' 2>/dev/null | wc -l)
+          ARTICLES=$(find $LATEST/web/blog -name '*.html' -type f 2>/dev/null | wc -l)
+          PODCASTS=$(find $LATEST/web/podcasts -name '*.mp3' -type f 2>/dev/null | wc -l)
           
+          # Check for index pages
+          BLOG_INDEX=$([ -f $LATEST/web/blog/index.html ] && echo "✓" || echo "✗")
+          PODCAST_INDEX=$([ -f $LATEST/web/podcasts/index.html ] && echo "✓" || echo "✗")
+          DASHBOARD=$([ -f $LATEST/web/dashboard/index.html ] && echo "✓" || echo "✗")
+          RSS_FEED=$([ -f $LATEST/web/podcast.xml ] && echo "✓" || echo "✗")
+          
+          # Calculate podcasts only if they exist
+          if [ "$PODCASTS" -gt 0 ]; then
+            PODCAST_INFO="🎙 $PODCASTS podcasts (3-5 min + jingles)"
+          else
+            PODCAST_INFO="⚠️ No podcasts (Edge TTS unavailable)"
+          fi
+          
+          # Send Telegram notification
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "parse_mode=HTML" \
-            -d "text=✅ <b>Titan Complete!</b>%0A%0A📝 $ARTICLES articles%0A🎙 $PODCASTS podcasts%0A🔍 $SEO SEO pages%0A%0A🌐 <a href='https://dashboard.sayplay.co.uk'>View Dashboard</a>%0A📚 <a href='https://dashboard.sayplay.co.uk/blog'>View Blog</a>%0A🎧 <a href='https://dashboard.sayplay.co.uk/podcast.xml'>RSS Feed</a>" || true
+            -d "text=✅ <b>Titan V2 Complete!</b>%0A%0A<b>📊 Content Generated:</b>%0A📝 $ARTICLES unique articles%0A$PODCAST_INFO%0A%0A<b>📄 Index Pages:</b>%0ABlog index: $BLOG_INDEX%0APodcast index: $PODCAST_INDEX%0ADashboard: $DASHBOARD%0ARSS feed: $RSS_FEED%0A%0A<b>🔗 Live URLs:</b>%0A🌐 <a href='https://dashboard.sayplay.co.uk'>Main Dashboard</a>%0A📚 <a href='https://dashboard.sayplay.co.uk/blog'>Blog Index</a>%0A🎧 <a href='https://dashboard.sayplay.co.uk/podcasts'>Podcast Index</a>%0A📡 <a href='https://dashboard.sayplay.co.uk/podcast.xml'>RSS Feed</a>%0A%0A⏱ Build: #${{ github.run_number }}" || true
       
       - name: Failure notification
         if: failure()
         run: |
+          # Get error details
+          LATEST=$(ls -dt TITAN_OUTPUT_* 2>/dev/null | head -1)
+          
+          if [ -n "$LATEST" ]; then
+            ERROR_MSG="Generated output found but deployment failed"
+          else
+            ERROR_MSG="Content generation failed"
+          fi
+          
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "parse_mode=HTML" \
-            -d "text=❌ <b>Titan Failed - Run #${{ github.run_number }}</b>%0A%0A<a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>View Error Logs</a>" || true
+            -d "text=❌ <b>Titan V2 Failed</b>%0A%0A<b>Run:</b> #${{ github.run_number }}%0A<b>Error:</b> $ERROR_MSG%0A%0A<a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>📋 View Error Logs</a>" || true
