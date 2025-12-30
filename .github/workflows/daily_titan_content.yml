@@ -3,6 +3,7 @@ on:
   schedule:
     - cron: '0 10 * * *'
   workflow_dispatch:
+
 jobs:
   titan-enhanced:
     runs-on: ubuntu-latest
@@ -60,37 +61,19 @@ jobs:
           git diff --staged --quiet || git commit -m "Update [skip ci]"
           git push || true
       
-      - name: Success notification with download link
+      - name: Success notification
         if: success()
         run: |
-          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d parse_mode="HTML" \
-            -d disable_web_page_preview="false" \
-            -d text="🎉 <b>Titan Complete - Run #${{ github.run_number }}</b>
-
-📥 <b>DOWNLOAD YOUR FILES:</b>
-
-<a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">👉 Click here to open workflow run</a>
-
-<b>Then:</b>
-1️⃣ Scroll to bottom of page
-2️⃣ Find section <b>Artifacts</b>
-3️⃣ Click <b>titan-content-${{ github.run_number }}</b>
-4️⃣ Download ZIP file!
-
-✅ All your content is ready inside"
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "parse_mode=HTML" \
+            -d "disable_web_page_preview=false" \
+            -d "text=🎉 <b>Titan Complete - Run #${{ github.run_number }}</b>%0A%0A📥 <b>DOWNLOAD FILES:</b>%0A%0A<a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>👉 Click here to open workflow run</a>%0A%0A<b>Then:</b>%0A1️⃣ Scroll to bottom of page%0A2️⃣ Find section <b>Artifacts</b>%0A3️⃣ Click <b>titan-content-${{ github.run_number }}</b>%0A4️⃣ Download ZIP file!%0A%0A✅ All your content is ready inside"
       
-      - name: Failure notification with logs link
+      - name: Failure notification
         if: failure()
         run: |
-          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d parse_mode="HTML" \
-            -d text="❌ <b>Titan Failed - Run #${{ github.run_number }}</b>
-
-<a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">👉 Click to view error logs</a>
-
-Check the logs to see what went wrong."
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "parse_mode=HTML" \
+            -d "text=❌ <b>Titan Failed - Run #${{ github.run_number }}</b>%0A%0A<a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>👉 Click to view error logs</a>%0A%0ACheck the logs to see what went wrong."
