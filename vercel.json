@@ -1,63 +1,15 @@
 {
   "version": 2,
-  "name": "sayplay-content",
-  "alias": ["sayplay.co.uk", "www.sayplay.co.uk"],
   "builds": [
     {
-      "src": "TITAN_OUTPUT/web/**",
+      "src": "TITAN_OUTPUT_*/web/**",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/blog/(.*)",
-      "dest": "/TITAN_OUTPUT/web/blog/$1"
-    },
-    {
-      "src": "/seo/(.*)",
-      "dest": "/TITAN_OUTPUT/web/seo/$1"
-    },
-    {
-      "src": "/dashboard",
-      "dest": "/TITAN_OUTPUT/web/dashboard/index.html"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/TITAN_OUTPUT/web/$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=3600, s-maxage=86400"
-        }
-      ]
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/dashboard",
-      "permanent": false
+      "dest": "/TITAN_OUTPUT_latest/web/$1"
     }
   ]
 }
-```
-
-**Create:** `.vercelignore`
-```
-node_modules
-.git
-.env
-*.pyc
-__pycache__
-.pytest_cache
-*.log
-.DS_Store
-titan_modules/
-scripts/
-requirements_titan.txt
-
