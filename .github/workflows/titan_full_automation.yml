@@ -2,8 +2,8 @@ name: Titan Full Automation
 
 on:
   schedule:
-    - cron: '0 10 * * *'
-  workflow_dispatch:
+    - cron: '0 10 * * *'  # Daily at 10 AM UTC
+  workflow_dispatch:  # Manual trigger
 
 jobs:
   generate-deploy:
@@ -11,16 +11,23 @@ jobs:
     timeout-minutes: 60
     
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       
-      - name: Install dependencies
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      
+      - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install requests pillow
+          pip install requests pillow google-generativeai edge-tts
       
       - name: Generate content
         env:
@@ -29,10 +36,6 @@ jobs:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: |
           python titan_master_orchestrator_v2.py
-      
-      - name: Generate RSS feed
-        run: |
-          python scripts/generate_podcast_rss.py || true
       
       - name: Prepare deployment folder
         run: |
@@ -47,8 +50,13 @@ jobs:
           echo "Contents of deploy folder:"
           ls -laR deploy/
           
-          echo "Checking file count:"
+          echo "Total files:"
           find deploy -type f | wc -l
+          
+          echo "File breakdown:"
+          echo "Blog articles: $(find deploy/blog -name '*.html' 2>/dev/null | wc -l)"
+          echo "SEO pages: $(find deploy/seo -name '*.html' 2>/dev/null | wc -l)"
+          echo "Podcasts: $(find deploy/podcasts -name '*.mp3' 2>/dev/null | wc -l)"
       
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -75,10 +83,16 @@ jobs:
       - name: Success notification
         if: success()
         run: |
+          # Count generated files
+          LATEST=$(ls -dt TITAN_OUTPUT_* | head -1)
+          ARTICLES=$(find $LATEST/web/blog -name '*.html' 2>/dev/null | wc -l)
+          PODCASTS=$(find $LATEST/web/podcasts -name '*.mp3' 2>/dev/null | wc -l)
+          SEO=$(find $LATEST/web/seo -name '*.html' 2>/dev/null | wc -l)
+          
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "parse_mode=HTML" \
-            -d "text=✅ <b>Titan Complete!</b>%0A%0A📝 10 articles live%0A🌐 <a href='https://dashboard.sayplay.co.uk'>View Dashboard</a>%0A📚 <a href='https://dashboard.sayplay.co.uk/blog'>View Blog</a>" || true
+            -d "text=✅ <b>Titan Complete!</b>%0A%0A📝 $ARTICLES articles%0A🎙 $PODCASTS podcasts%0A🔍 $SEO SEO pages%0A%0A🌐 <a href='https://dashboard.sayplay.co.uk'>View Dashboard</a>%0A📚 <a href='https://dashboard.sayplay.co.uk/blog'>View Blog</a>%0A🎧 <a href='https://dashboard.sayplay.co.uk/podcast.xml'>RSS Feed</a>" || true
       
       - name: Failure notification
         if: failure()
@@ -86,4 +100,4 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "parse_mode=HTML" \
-            -d "text=❌ <b>Titan Failed</b>%0A%0A<a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>View Logs</a>" || true
+            -d "text=❌ <b>Titan Failed - Run #${{ github.run_number }}</b>%0A%0A<a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>View Error Logs</a>" || true
