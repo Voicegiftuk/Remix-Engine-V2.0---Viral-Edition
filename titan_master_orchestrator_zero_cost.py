@@ -936,48 +936,12 @@ def main():
             print(f"B2B: Bulletproof validation active")
         print("="*70)
         
-        # Enhanced Telegram message with download link
-        telegram_message = f"<b>🎉 Titan Complete</b>\n\n"
-        telegram_message += f"<b>⏱ Duration:</b> {duration:.1f}s\n"
-        telegram_message += f"<b>📦 Modules:</b> {results['modules_run']}\n\n"
+        # Telegram notification now sent by workflow AFTER artifacts upload
+        # This ensures artifact download link is available when message arrives
+        # send_telegram_notification(telegram_message)
         
-        if 'blog' in results['outputs']:
-            telegram_message += f"<b>📝 Blog:</b> {results['outputs']['blog']['title'][:45]}...\n"
-            telegram_message += f"<b>🔑 Keyword:</b> {results['outputs']['blog']['keyword']}\n"
-            telegram_message += f"<b>📊 Words:</b> {results['outputs']['blog']['word_count']}\n"
-            if 'unique_id' in results['outputs']['blog']:
-                telegram_message += f"<b>🆔 ID:</b> {results['outputs']['blog']['unique_id']}\n"
-            telegram_message += "\n"
-        
-        if 'images' in results['outputs']:
-            img_count = results['outputs']['images']['variants_generated']
-            telegram_message += f"<b>🖼 Images:</b> {img_count} unique variants\n"
-        
-        if 'podcast' in results['outputs']:
-            telegram_message += f"<b>🎙 Podcast:</b> {results['outputs']['podcast']['duration']}s\n"
-            telegram_message += f"<b>🎵 Quality:</b> {results['outputs']['podcast'].get('quality', 'Premium')}\n"
-        
-        if 'translations' in results['outputs']:
-            telegram_message += f"<b>🌍 Languages:</b> {len(results['outputs']['translations']['languages'])}\n"
-        
-        if 'b2b' in results['outputs']:
-            b2b = results['outputs']['b2b']
-            telegram_message += f"\n<b>📧 B2B Bulletproof:</b>\n"
-            telegram_message += f"  ✓ Found: {b2b.get('businesses_found', 0)}\n"
-            telegram_message += f"  ✓ Validated: {b2b.get('emails_validated', 0)}\n"
-            telegram_message += f"  ✓ Sent: {b2b.get('emails_sent', 0)}\n"
-        
-        telegram_message += f"\n<b>💰 Cost:</b> {'9.40 GBP/month' if GOOGLE_ENHANCED else 'FREE'}\n"
-        telegram_message += f"<b>📂 Files:</b> {len(saved_files)} saved\n"
-        
-        # ADD ARTIFACT DOWNLOAD LINK
-        telegram_message += f"\n<b>📥 DOWNLOAD FILES:</b>\n"
-        telegram_message += f"<a href='https://github.com/Voicegiftuk/Remix-Engine-V2.0---Viral-Edition/actions'>👉 GitHub Actions → Artifacts</a>\n"
-        telegram_message += f"\n<i>Look for: titan-content-XXX.zip in latest run</i>"
-        
-        send_telegram_notification(telegram_message)
-        
-        print("\nTelegram notification sent with download link")
+        print("\nTelegram notification will be sent by workflow")
+        print("(after artifacts upload with direct download link)")
         print("\n" + "="*70 + "\n")
         
         return 0
