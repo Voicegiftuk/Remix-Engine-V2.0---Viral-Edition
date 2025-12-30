@@ -1,39 +1,43 @@
-name: Titan Full Automation - Daily Content + Deploy
+name: Titan Full Automation
 
 on:
   schedule:
-    - cron: '0 10 * * *'  # Daily at 10 AM UTC
+    - cron: '0 10 * * *'
   workflow_dispatch:
 
 jobs:
-  generate-and-deploy:
+  generate-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
       
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements_titan.txt
+          pip install google-generativeai edge-tts pillow requests
       
-      - name: Generate all content (10 topics)
+      - name: Generate content
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
         run: |
           python titan_master_orchestrator_v2.py
+      
+      - name: Generate RSS feed
+        run: |
+          python scripts/generate_podcast_rss.py || true
+      
+      - name: Create symlink for Vercel
+        run: |
+          LATEST=$(ls -dt TITAN_OUTPUT_* | head -1)
+          ln -s "$LATEST" TITAN_OUTPUT_latest
       
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
@@ -41,24 +45,9 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./TITAN_OUTPUT_*/web
           vercel-args: '--prod'
       
-      - name: Update Google Sitemap
-        env:
-          GOOGLE_SEARCH_CONSOLE_KEY: ${{ secrets.GOOGLE_SEARCH_CONSOLE_KEY }}
-        run: |
-          python scripts/update_google_sitemap.py
-      
-      - name: Upload Podcasts to Spotify
-        env:
-          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
-          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
-          SPOTIFY_SHOW_ID: ${{ secrets.SPOTIFY_SHOW_ID }}
-        run: |
-          python scripts/upload_podcasts_spotify.py
-      
-      - name: Upload artifacts for backup
+      - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -66,19 +55,10 @@ jobs:
           path: TITAN_OUTPUT_*
           retention-days: 30
       
-      - name: Send success notification
+      - name: Success notification
         if: success()
         run: |
-          TIMESTAMP=$(date +%Y-%m-%d_%H%M)
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "parse_mode=HTML" \
-            -d "text=✅ <b>Titan Complete!</b>%0A%0A📝 10 articles published%0A🎙 10 podcasts on Spotify%0A🖼 50+ images generated%0A📈 100+ SEO pages live%0A%0A🌐 <a href='https://sayplay.co.uk'>View Website</a>%0A📊 <a href='https://dashboard.sayplay.co.uk'>View Dashboard</a>%0A%0A⏱ Run #${{ github.run_number }}"
-      
-      - name: Send failure notification
-        if: failure()
-        run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "parse_mode=HTML" \
-            -d "text=❌ <b>Titan Failed - Run #${{ github.run_number }}</b>%0A%0A<a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>View Error Logs</a>"
+            -d "text=✅ <b>Titan Complete!</b>%0A%0A📝 Content published%0A🌐 <a href='https://sayplay.co.uk'>View Website</a>" || true
