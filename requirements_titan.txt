@@ -1,28 +1,13 @@
-# ============================================
-# TITAN REQUIREMENTS (NEW GOOGLE SDK)
-# ============================================
-
-# NEW Google AI SDK (replaces deprecated google-generativeai)
 google-genai>=1.0.0
-
-# HTTP & APIs
+google-generativeai>=0.3.0
 requests>=2.31.0
 aiohttp>=3.9.0
-
-# Content Processing
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 markdown>=3.5.0
-
-# Image Handling
 Pillow>=10.0.0
-
-# Utilities
 python-dotenv>=1.0.0
 python-slugify>=8.0.0
 pytz>=2023.3
-
-# ============================================
-# CRITICAL: Using NEW google-genai package
-# Old google-generativeai is DEPRECATED
-# ============================================
+edge-tts>=6.1.0
+dnspython>=2.4.0
