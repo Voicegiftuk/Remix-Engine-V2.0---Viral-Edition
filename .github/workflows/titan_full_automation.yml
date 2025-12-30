@@ -34,10 +34,18 @@ jobs:
         run: |
           python scripts/generate_podcast_rss.py || true
       
-      - name: Create symlink for Vercel
+      - name: Prepare deployment folder
         run: |
           LATEST=$(ls -dt TITAN_OUTPUT_* | head -1)
-          ln -s "$LATEST" TITAN_OUTPUT_latest
+          echo "Latest output: $LATEST"
+          
+          # Copy web content to deploy folder
+          mkdir -p deploy
+          cp -r $LATEST/web/* deploy/
+          
+          # List what we're deploying
+          echo "Contents of deploy folder:"
+          ls -la deploy/
       
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
@@ -45,6 +53,7 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./deploy
           vercel-args: '--prod'
       
       - name: Upload artifacts
@@ -61,7 +70,7 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "parse_mode=HTML" \
-            -d "text=✅ <b>Titan Complete!</b>%0A%0A📝 {10} articles live%0A🌐 <a href='https://dashboard.sayplay.co.uk'>View Dashboard</a>%0A📚 <a href='https://dashboard.sayplay.co.uk/blog'>View Blog</a>" || true
+            -d "text=✅ <b>Titan Complete!</b>%0A%0A📝 10 articles live%0A🌐 <a href='https://dashboard.sayplay.co.uk'>View Dashboard</a>%0A📚 <a href='https://dashboard.sayplay.co.uk/blog'>View Blog</a>" || true
       
       - name: Failure notification
         if: failure()
