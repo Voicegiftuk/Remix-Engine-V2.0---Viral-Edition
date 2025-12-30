@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install google-generativeai edge-tts pillow requests
+          pip install requests pillow
       
       - name: Generate content
         env:
@@ -61,4 +61,46 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "parse_mode=HTML" \
-            -d "text=✅ <b>Titan Complete!</b>%0A%0A📝 Content published%0A🌐 <a href='https://sayplay.co.uk'>View Website</a>" || true
+            -d "text=✅ <b>Titan Complete!</b>%0A%0A📝 {10} articles live%0A🌐 <a href='https://dashboard.sayplay.co.uk'>View Dashboard</a>%0A📚 <a href='https://dashboard.sayplay.co.uk/blog'>View Blog</a>" || true
+      
+      - name: Failure notification
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "parse_mode=HTML" \
+            -d "text=❌ <b>Titan Failed</b>%0A%0A<a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>View Logs</a>" || true
+```
+
+**Commit:** "Add GitHub workflow"
+
+---
+
+## ✅ PODSUMOWANIE - 5 PLIKÓW DO COMMIT
+```
+✅ vercel.json
+✅ titan_modules/core/multi_topic_generator.py
+✅ scripts/generate_podcast_rss.py
+✅ titan_master_orchestrator_v2.py
+✅ .github/workflows/titan_full_automation.yml
+```
+
+---
+
+## 🚀 PO COMMIT WSZYSTKICH PLIKÓW
+
+### **RUN WORKFLOW:**
+
+1. **GitHub → Actions**
+2. **"Titan Full Automation"**
+3. **"Run workflow"** dropdown
+4. **Select branch:** main
+5. **Click:** "Run workflow"
+
+---
+
+## 🎯 CO ZOBACZYSZ PO 5-10 MINUTACH
+```
+✅ https://dashboard.sayplay.co.uk → Dashboard
+✅ https://dashboard.sayplay.co.uk/blog/perfect-birthday-gifts-for-mum-2025 → Article
+✅ https://dashboard.sayplay.co.uk/podcast.xml → RSS Feed
