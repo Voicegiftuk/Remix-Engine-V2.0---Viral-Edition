@@ -1,10 +1,8 @@
 name: Daily Titan Content Enhanced
-
 on:
   schedule:
     - cron: '0 10 * * *'
   workflow_dispatch:
-
 jobs:
   titan-enhanced:
     runs-on: ubuntu-latest
@@ -23,7 +21,6 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements_titan.txt
-          pip install edge-tts
       
       - name: Run Titan System
         env:
@@ -35,6 +32,24 @@ jobs:
           PINTEREST_BOARD_ID: ${{ secrets.PINTEREST_BOARD_ID }}
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: python titan_master_orchestrator_zero_cost.py
+      
+      - name: Upload generated content
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: titan-content-${{ github.run_number }}
+          path: |
+            article.html
+            article.txt
+            article_meta.json
+            podcast.mp3
+            translations/
+            images/
+            seo_pages_summary.json
+            b2b_validation_log.json
+            influencer_scout_db.json
+          retention-days: 30
+          if-no-files-found: warn
       
       - name: Commit updates
         if: success()
