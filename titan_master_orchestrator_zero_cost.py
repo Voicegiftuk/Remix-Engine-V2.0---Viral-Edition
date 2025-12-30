@@ -1,963 +1,1639 @@
 #!/usr/bin/env python3
 """
-TITAN MASTER ORCHESTRATOR - ENHANCED VERSION
-Uses FREE APIs + Google Maps (with $200 FREE credit!)
+TITAN MASTER ORCHESTRATOR V2 - PROFESSIONAL COMPLETE
+- Real images from Unsplash/Pexels with logo
+- 3-5 minute podcasts
+- Unique 1500+ word articles
+- Index pages for blog and SEO
+- Professional design
 """
 import sys
 import os
 from pathlib import Path
 from datetime import datetime
-import random
 import json
+import base64
+import asyncio
+from typing import List, Dict
 import hashlib
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+from titan_modules.core.multi_topic_generator import MultiTopicGenerator
+
+# Gemini
 try:
-    from titan_modules.growth.b2b_hunter.b2b_hunter_bulletproof import B2BHunterBulletproof
-    B2B_BULLETPROOF = True
-    print("B2B Bulletproof Mode Active")
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
 except ImportError:
-    B2B_BULLETPROOF = False
-    print("B2B Bulletproof not available")
+    GEMINI_AVAILABLE = False
+    print("⚠️ google-generativeai not installed")
 
-try:
-    from titan_modules.psychology.precognition.gift_precognition_enhanced import GiftPrecognition
-    from titan_modules.commerce.address_validation import AddressValidator
-    GOOGLE_ENHANCED = True
-    print("Google Enhanced Mode Active")
-except ImportError:
-    try:
-        from titan_modules.psychology.precognition.gift_precognition_zero_cost import GiftPrecognition
-    except:
-        pass
-    GOOGLE_ENHANCED = False
-
-modules_loaded = {}
-
-try:
-    from titan_modules.foundation.brand_identity.brand_identity_core import BrandIdentityCore
-    modules_loaded['brand'] = True
-except Exception as e:
-    print(f"Brand Identity not loaded: {e}")
-    modules_loaded['brand'] = False
-
-try:
-    from titan_modules.content.image_engine.image_engine_zero_cost import ImageEngine
-    modules_loaded['images'] = True
-except Exception as e:
-    print(f"Image Engine not loaded: {e}")
-    modules_loaded['images'] = False
-
-try:
-    from titan_modules.content.audio_inception.audio_inception_zero_cost import AudioInception
-    modules_loaded['audio'] = True
-except Exception as e:
-    print(f"Audio Inception not loaded: {e}")
-    modules_loaded['audio'] = False
-
-try:
-    from titan_modules.expansion.global_domination.global_domination_zero_cost import GlobalDomination
-    modules_loaded['global'] = True
-except Exception as e:
-    print(f"Global Domination not loaded: {e}")
-    modules_loaded['global'] = False
-
-try:
-    from titan_modules.expansion.programmatic_seo.programmatic_seo import ProgrammaticSEO
-    modules_loaded['seo'] = True
-except Exception as e:
-    print(f"Programmatic SEO not loaded: {e}")
-    modules_loaded['seo'] = False
-
-try:
-    from titan_modules.distribution.social_poster import SocialPoster
-    modules_loaded['social'] = True
-except Exception as e:
-    print(f"Social Poster not loaded: {e}")
-    modules_loaded['social'] = False
-
-try:
-    from titan_modules.growth.influencer_scout.influencer_scout import InfluencerScout, run_influencer_campaign
-    modules_loaded['influencer'] = True
-except Exception as e:
-    print(f"Influencer Scout not loaded: {e}")
-    modules_loaded['influencer'] = False
-
-modules_loaded['pricing'] = False
-modules_loaded['chameleon'] = False
-modules_loaded['blog'] = True  # Always true - we use direct Gemini
-
+# Images
 import requests
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
-def generate_unique_id():
-    """Generate unique ID for this content run"""
-    timestamp = str(datetime.now().timestamp())
-    return hashlib.md5(timestamp.encode()).hexdigest()[:8]
+# Audio
+try:
+    import edge_tts
+    EDGE_TTS_AVAILABLE = True
+except ImportError:
+    EDGE_TTS_AVAILABLE = False
+    print("⚠️ edge-tts not installed")
 
-def generate_topic():
-    """Simple built-in topic generator"""
-    topics = [
-        {
-            'keyword': 'birthday gifts for mum',
-            'category': 'Occasions',
-            'title': 'Perfect Birthday Gifts for Mum 2025',
-            'angle': 'heartfelt and personal',
-            'search_volume': 5000
-        },
-        {
-            'keyword': 'anniversary gifts for wife',
-            'category': 'Occasions',
-            'title': 'Romantic Anniversary Gifts Your Wife Will Love',
-            'angle': 'romantic and memorable',
-            'search_volume': 4200
-        },
-        {
-            'keyword': 'christmas gifts for family',
-            'category': 'Occasions',
-            'title': 'Thoughtful Christmas Gifts for the Whole Family',
-            'angle': 'festive and meaningful',
-            'search_volume': 8500
-        },
-        {
-            'keyword': 'wedding gifts for couples',
-            'category': 'Occasions',
-            'title': 'Unique Wedding Gifts Couples Will Treasure',
-            'angle': 'unique and lasting',
-            'search_volume': 3800
-        },
-        {
-            'keyword': 'graduation gifts for her',
-            'category': 'Occasions',
-            'title': 'Inspiring Graduation Gifts She Will Cherish',
-            'angle': 'inspirational and practical',
-            'search_volume': 2900
-        },
-        {
-            'keyword': 'mothers day gift ideas',
-            'category': 'Occasions',
-            'title': 'Heartfelt Mothers Day Gifts She Will Love',
-            'angle': 'emotional and personal',
-            'search_volume': 12000
-        },
-        {
-            'keyword': 'fathers day presents',
-            'category': 'Occasions',
-            'title': 'Best Fathers Day Presents for Every Dad',
-            'angle': 'practical and meaningful',
-            'search_volume': 9500
-        },
-        {
-            'keyword': 'valentine gifts for him',
-            'category': 'Occasions',
-            'title': 'Romantic Valentine Gifts He Will Actually Want',
-            'angle': 'romantic and thoughtful',
-            'search_volume': 6700
-        }
-    ]
+
+class ProfessionalImageGenerator:
+    """Generate professional images with SayPlay branding"""
     
-    topic = random.choice(topics)
-    print(f"Generated topic: {topic['keyword']}")
-    print(f"Category: {topic['category']}")
-    print(f"Search volume: {topic['search_volume']}")
-    return topic
+    def __init__(self):
+        self.unsplash_key = os.getenv('UNSPLASH_ACCESS_KEY', '')
+        self.pexels_key = os.getenv('PEXELS_API_KEY', '')
+    
+    def generate_hero_image(self, keyword: str, width: int = 1200, height: int = 630) -> bytes:
+        """Generate hero image with logo"""
+        print(f"      🖼 Fetching image for: {keyword}")
+        
+        # Try Unsplash
+        if self.unsplash_key:
+            img = self._fetch_unsplash(keyword, width, height)
+            if img:
+                print(f"         ✅ Got Unsplash image")
+                return self._add_logo_overlay(img)
+        
+        # Try Pexels
+        if self.pexels_key:
+            img = self._fetch_pexels(keyword, width, height)
+            if img:
+                print(f"         ✅ Got Pexels image")
+                return self._add_logo_overlay(img)
+        
+        # Fallback gradient
+        print(f"         ⚠️ Using gradient fallback")
+        return self._generate_gradient(width, height)
+    
+    def _fetch_unsplash(self, query: str, width: int, height: int):
+        """Fetch from Unsplash API"""
+        try:
+            url = "https://api.unsplash.com/photos/random"
+            params = {
+                'query': query,
+                'orientation': 'landscape',
+                'client_id': self.unsplash_key
+            }
+            
+            response = requests.get(url, params=params, timeout=20)
+            
+            if response.status_code == 200:
+                data = response.json()
+                image_url = data['urls']['raw'] + f"&w={width}&h={height}&fit=crop"
+                
+                img_response = requests.get(image_url, timeout=25)
+                if img_response.status_code == 200:
+                    return Image.open(BytesIO(img_response.content)).convert('RGB')
+        except Exception as e:
+            print(f"         Unsplash error: {str(e)[:80]}")
+        
+        return None
+    
+    def _fetch_pexels(self, query: str, width: int, height: int):
+        """Fetch from Pexels API"""
+        try:
+            url = "https://api.pexels.com/v1/search"
+            headers = {'Authorization': self.pexels_key}
+            params = {
+                'query': query,
+                'per_page': 1,
+                'orientation': 'landscape'
+            }
+            
+            response = requests.get(url, headers=headers, params=params, timeout=20)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('photos'):
+                    image_url = data['photos'][0]['src']['large2x']
+                    
+                    img_response = requests.get(image_url, timeout=25)
+                    if img_response.status_code == 200:
+                        img = Image.open(BytesIO(img_response.content)).convert('RGB')
+                        return img.resize((width, height), Image.Resampling.LANCZOS)
+        except Exception as e:
+            print(f"         Pexels error: {str(e)[:80]}")
+        
+        return None
+    
+    def _generate_gradient(self, width: int, height: int) -> bytes:
+        """Generate gradient background"""
+        img = Image.new('RGB', (width, height))
+        draw = ImageDraw.Draw(img)
+        
+        for y in range(height):
+            r = int(102 + (118 - 102) * y / height)
+            g = int(126 + (75 - 126) * y / height)
+            b = int(234 + (162 - 234) * y / height)
+            draw.line([(0, y), (width, y)], fill=(r, g, b))
+        
+        return self._add_logo_overlay(img)
+    
+    def _add_logo_overlay(self, img: Image.Image) -> bytes:
+        """Add SayPlay logo to image"""
+        width, height = img.size
+        
+        # Dark gradient overlay at bottom
+        overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        
+        gradient_start = int(height * 0.65)
+        for y in range(gradient_start, height):
+            progress = (y - gradient_start) / (height - gradient_start)
+            alpha = int(200 * progress)
+            overlay_draw.rectangle([(0, y), (width, y+1)], fill=(0, 0, 0, alpha))
+        
+        # Composite overlay
+        img = img.convert('RGBA')
+        img = Image.alpha_composite(img, overlay)
+        
+        # Add logo text
+        draw = ImageDraw.Draw(img)
+        
+        try:
+            logo_size = max(40, int(height * 0.08))
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", logo_size)
+        except:
+            logo_size = 40
+            font = ImageFont.load_default()
+        
+        # Position logo
+        logo_x = width - int(width * 0.35)
+        logo_y = height - int(height * 0.15)
+        
+        # Draw "Say" in white
+        draw.text((logo_x, logo_y), "Say", fill=(255, 255, 255), font=font)
+        
+        # Calculate "Say" width
+        say_bbox = draw.textbbox((0, 0), "Say", font=font)
+        say_width = say_bbox[2] - say_bbox[0]
+        
+        # Draw "Play" in gold
+        draw.text((logo_x + say_width, logo_y), "Play", fill=(255, 215, 0), font=font)
+        
+        # Convert to bytes
+        img = img.convert('RGB')
+        output = BytesIO()
+        img.save(output, format='JPEG', quality=92)
+        return output.getvalue()
+
+
+class LongFormPodcastGenerator:
+    """Generate 3-5 minute podcasts"""
+    
+    async def generate_podcast(self, article: dict, topic: dict, episode_num: int) -> dict:
+        """Generate long-form podcast"""
+        if not EDGE_TTS_AVAILABLE:
+            print("      ⚠️ Edge TTS not available")
+            return None
+        
+        print(f"      🎙 Generating podcast (3-5 min)...")
+        
+        # Create detailed script (800-1000 words for 3-5 minutes)
+        script_parts = [
+            f"Hello and welcome to the SayPlay Gift Guide, I'm your host, and this is episode {episode_num}.",
+            f"Today, we're diving deep into {topic['title'].lower()}.",
+            "",
+            "Finding the perfect gift can feel overwhelming, but it doesn't have to be. Whether you're shopping for a milestone celebration or just want to show someone you care, the right gift can create a memory that lasts forever.",
+            "",
+            f"Let's talk about {topic['keyword']}. What makes a gift truly special? It's not just about the price tag or the packaging. It's about thoughtfulness, personalization, and showing that you truly understand the person you're giving to.",
+            "",
+            "Here are some ideas that really stand out:",
+            "",
+            "First, consider personalized items. A custom piece of jewelry, an engraved watch, or a photo album filled with memories can mean so much more than something generic off the shelf.",
+            "",
+            "Second, think about experiences. Concert tickets, a cooking class, or a weekend getaway can create new memories together. These are gifts that keep on giving.",
+            "",
+            "Third, handmade gifts show incredible thoughtfulness. Whether it's a knitted scarf, a painted portrait, or homemade treats, the time and effort you put in speaks volumes.",
+            "",
+            "Fourth, subscription services are perfect for ongoing joy. A monthly book club, coffee delivery, or streaming service shows you're thinking about them all year long.",
+            "",
+            "Fifth, tech gadgets for the person who loves innovation. Smart home devices, wireless earbuds, or the latest tablet can be both practical and exciting.",
+            "",
+            "Sixth, wellness gifts like a spa day, massage gift card, or meditation app subscription show you care about their wellbeing.",
+            "",
+            "And finally, don't underestimate the power of a heartfelt card with a personal message. Sometimes words matter most.",
+            "",
+            "But here's where SayPlay takes gift-giving to the next level. Imagine being able to record your voice, sharing a personal message, a favorite memory, or even singing happy birthday. With SayPlay's NFC technology, you can attach that voice message to any gift. The recipient simply taps their phone, and your voice plays instantly. No app needed, no complicated setup.",
+            "",
+            "Think about it - a grandmother hearing her grandchild's voice every time she looks at her gift. A long-distance friend feeling connected through your words. A spouse reliving your wedding vows on your anniversary. That's the magic of adding your voice.",
+            "",
+            "Whether you're giving jewelry, flowers, a photo frame, or any gift at all, SayPlay transforms it into something unforgettable. Your voice becomes part of the gift forever.",
+            "",
+            f"So as you think about {topic['keyword']}, remember - it's not just what you give, but how you give it. Add your personal touch, add your voice, and create a moment they'll treasure.",
+            "",
+            "Visit sayplay dot co dot uk to learn more about adding voice messages to your gifts. Make every gift unforgettable.",
+            "",
+            f"That's it for episode {episode_num} of the SayPlay Gift Guide. Thanks for listening, and happy gift giving!"
+        ]
+        
+        full_script = " ".join(script_parts)
+        
+        # Generate audio with UK voice
+        voice = "en-GB-SoniaNeural"
+        communicate = edge_tts.Communicate(full_script, voice, rate="+0%", volume="+0%")
+        
+        # Save to temp file
+        temp_file = f"temp_podcast_{episode_num}.mp3"
+        await communicate.save(temp_file)
+        
+        # Read audio data
+        with open(temp_file, 'rb') as f:
+            audio_data = f.read()
+        
+        # Cleanup
+        os.remove(temp_file)
+        
+        duration = len(audio_data) / 3000  # Rough estimate
+        
+        print(f"         ✅ Podcast generated (~{int(duration)}s)")
+        
+        return {
+            'audio': audio_data,
+            'script': full_script,
+            'duration': int(duration),
+            'voice': voice
+        }
+
 
 def generate_article_with_gemini(topic: dict, api_key: str) -> dict:
-    """Generate complete article using Gemini directly"""
+    """Generate unique article with Gemini"""
+    
+    if not GEMINI_AVAILABLE or not api_key:
+        return generate_fallback_article(topic)
+    
     try:
-        import google.generativeai as genai
-        
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash-latest')
         
+        # Create unique seed for this topic
+        seed = hashlib.md5(f"{topic['title']}{datetime.now().date()}".encode()).hexdigest()
+        
         prompt = f"""Write a comprehensive, engaging blog article about: {topic['title']}
 
+CRITICAL: Make this article UNIQUE and DIFFERENT from others. Use creative examples and fresh perspectives.
+
 Keyword: {topic['keyword']}
-Target length: 1200-1500 words
 Tone: {topic['angle']}
+Length: 1500-1800 words
+Article ID: {seed[:8]}
 
 Structure:
-- Compelling introduction that hooks the reader emotionally
-- 6-8 main sections with detailed, practical information
-- Specific gift suggestions with descriptions
-- Personal stories or examples
-- Tips for choosing and presenting gifts
-- Strong conclusion with call-to-action
+1. Compelling introduction (3 paragraphs) - Hook readers emotionally
+2. Why This Gift Matters (2 paragraphs) - Explain significance
+3. Top 7-9 Specific Gift Ideas:
+   - Each idea: 150-200 words
+   - Include specific products/brands
+   - Price ranges (budget to luxury)
+   - Where to buy (UK shops/online)
+   - Why it's meaningful
+4. Personalization Ideas (2 paragraphs) - How to make it special
+5. Presentation Tips (2 paragraphs) - How to give the gift
+6. Common Mistakes to Avoid (1 paragraph)
+7. Conclusion with emotional appeal (2 paragraphs)
 
-Make it feel authentic, helpful, and engaging. Write in a warm, conversational tone.
-Include specific product categories and ideas.
-Focus on helping people find meaningful gifts that create lasting memories.
-
-DO NOT use generic placeholder text. Write actual, specific content."""
+IMPORTANT:
+- Use real, specific examples (not generic)
+- Include UK shopping references (John Lewis, Not On The High Street, Amazon UK, local shops)
+- Make it conversational and warm
+- Add personal anecdotes and scenarios
+- Focus on emotional connection
+- Each article MUST be completely different from others"""
 
         response = model.generate_content(prompt)
         article_text = response.text
         
-        # Create HTML version with proper formatting
-        paragraphs = article_text.split('\n')
-        html_parts = [f'<article>\n<h1>{topic["title"]}</h1>\n']
+        # Parse sections
+        sections = []
+        current_section = {'title': '', 'content': ''}
         
-        in_list = False
-        for para in paragraphs:
-            para = para.strip()
-            if not para:
+        for line in article_text.split('\n'):
+            line = line.strip()
+            if not line:
                 continue
-                
-            if para.startswith('##'):
-                # H2 header
-                if in_list:
-                    html_parts.append('</ul>')
-                    in_list = False
-                header_text = para.replace('##', '').strip()
-                html_parts.append(f'<h2>{header_text}</h2>')
-            elif para.startswith('#'):
-                # H3 header
-                if in_list:
-                    html_parts.append('</ul>')
-                    in_list = False
-                header_text = para.replace('#', '').strip()
-                html_parts.append(f'<h3>{header_text}</h3>')
-            elif para.startswith('*') or para.startswith('-'):
-                # List item
-                if not in_list:
-                    html_parts.append('<ul>')
-                    in_list = True
-                item_text = para.lstrip('*-').strip()
-                html_parts.append(f'<li>{item_text}</li>')
+            
+            if line.startswith('##'):
+                if current_section['content']:
+                    sections.append(current_section)
+                current_section = {'title': line.replace('##', '').strip(), 'content': ''}
+            elif line.startswith('#'):
+                if current_section['content']:
+                    sections.append(current_section)
+                current_section = {'title': line.replace('#', '').strip(), 'content': ''}
             else:
-                # Regular paragraph
-                if in_list:
-                    html_parts.append('</ul>')
-                    in_list = False
-                html_parts.append(f'<p>{para}</p>')
+                current_section['content'] += line + '\n'
         
-        if in_list:
-            html_parts.append('</ul>')
-        
-        # Add branding footer
-        html_parts.append(f'''
-<div style="border-top: 2px solid #667eea; margin-top: 2rem; padding-top: 1rem;">
-<p><strong>💝 Make Every Gift Special with SayPlay</strong></p>
-<p>Add a personal voice message to any gift with our NFC technology. No app needed - just tap and play! 
-Visit <a href="https://sayplay.gift" style="color: #667eea;">sayplay.gift</a> to learn more.</p>
-</div>
-</article>
-''')
-        
-        html_content = '\n'.join(html_parts)
-        
-        # Add unique identifier
-        unique_id = generate_unique_id()
-        html_content += f'\n<!-- Generated: {unique_id} at {datetime.now().isoformat()} -->'
+        if current_section['content']:
+            sections.append(current_section)
         
         word_count = len(article_text.split())
         
-        print(f"✅ Article generated: {word_count} words")
+        print(f"      ✅ Article: {word_count} words, {len(sections)} sections")
         
         return {
             'title': topic['title'],
             'text': article_text,
-            'html': html_content,
+            'sections': sections,
             'word_count': word_count,
-            'keyword': topic['keyword'],
-            'unique_id': unique_id
+            'keyword': topic['keyword']
         }
         
     except Exception as e:
-        print(f"❌ Gemini generation failed: {e}")
-        print(f"Creating enhanced fallback article...")
-        
-        # MUCH BETTER fallback with real content
-        unique_id = generate_unique_id()
-        
-        return {
-            'title': topic['title'],
-            'text': f"""Finding the perfect {topic['keyword']} can feel overwhelming with so many options available. But with thoughtful consideration and the right guidance, you can select something truly meaningful that will be cherished for years to come.
+        print(f"      ⚠️ Gemini error: {str(e)[:100]}")
+        return generate_fallback_article(topic)
 
-Understanding What Makes a Great Gift
 
-The best gifts aren't necessarily the most expensive ones. They're the ones that show you truly understand and care about the recipient. When choosing {topic['keyword']}, consider their personality, interests, daily routine, and what would genuinely make their life better or more enjoyable.
-
-Top Gift Categories to Consider
-
-1. Personalized Items
-Adding a personal touch transforms an ordinary gift into something extraordinary. Consider items that can be customized with names, dates, photos, or special messages. Voice message gifts, like those from SayPlay, let you add your heartfelt words that can be heard simply by tapping the gift with a phone.
-
-2. Experience Gifts
-Sometimes the best gift isn't a thing at all - it's a memory waiting to be made. Consider concert tickets, cooking classes, spa days, or weekend getaways. These create lasting memories that outlive any physical item.
-
-3. Practical Luxuries
-These are items people want but wouldn't necessarily buy for themselves. Think high-quality versions of everyday items: premium skincare, gourmet food baskets, cozy blankets, or elegant accessories.
-
-4. Hobby-Related Gifts
-If they're passionate about something, lean into it. Whether it's gardening, cooking, reading, or crafting, there's always equipment, supplies, or accessories they'd appreciate.
-
-5. Subscription Services
-Gifts that keep giving month after month. From streaming services to book clubs, coffee deliveries to online courses, subscriptions show ongoing thoughtfulness.
-
-Making Your Gift Extra Special
-
-The presentation matters almost as much as the gift itself. Take time to wrap it beautifully, include a heartfelt card, and consider adding a personal voice message with SayPlay's NFC technology. These small touches elevate your gift from good to unforgettable.
-
-Timing Your Purchase
-
-Don't wait until the last minute. Shopping early gives you time to find the perfect item, allows for shipping delays, and reduces stress. Plus, you can often find better deals when you're not shopping in a panic.
-
-Budget-Friendly Options
-
-Meaningful gifts don't require a huge budget. Handmade items, thoughtful letters, photo albums, or experiences you can share together often mean more than expensive purchases. It's the thought and effort that count.
-
-Final Thoughts
-
-Remember, the goal isn't perfection - it's showing someone you care. Whether you choose something practical, sentimental, or fun, what matters most is the love and thought behind it. Take your time, trust your instincts, and don't be afraid to get creative.
-
-At SayPlay, we believe every gift tells a story. Our voice message technology helps you add your personal touch to any present, creating moments that last forever. Visit sayplay.gift to discover how a simple tap can unlock your heartfelt message.
-
-The perfect gift is out there - and now you're equipped to find it.""",
-            'html': f"""<article>
-<h1>{topic['title']}</h1>
-
-<p>Finding the perfect <strong>{topic['keyword']}</strong> can feel overwhelming with so many options available. But with thoughtful consideration and the right guidance, you can select something truly meaningful that will be cherished for years to come.</p>
-
-<h2>Understanding What Makes a Great Gift</h2>
-
-<p>The best gifts aren't necessarily the most expensive ones. They're the ones that show you truly understand and care about the recipient. When choosing {topic['keyword']}, consider their personality, interests, daily routine, and what would genuinely make their life better or more enjoyable.</p>
-
-<h2>Top Gift Categories to Consider</h2>
-
-<h3>1. Personalized Items</h3>
-<p>Adding a personal touch transforms an ordinary gift into something extraordinary. Consider items that can be customized with names, dates, photos, or special messages. <strong>Voice message gifts</strong>, like those from SayPlay, let you add your heartfelt words that can be heard simply by tapping the gift with a phone.</p>
-
-<h3>2. Experience Gifts</h3>
-<p>Sometimes the best gift isn't a thing at all - it's a memory waiting to be made. Consider concert tickets, cooking classes, spa days, or weekend getaways. These create lasting memories that outlive any physical item.</p>
-
-<h3>3. Practical Luxuries</h3>
-<p>These are items people want but wouldn't necessarily buy for themselves. Think high-quality versions of everyday items: premium skincare, gourmet food baskets, cozy blankets, or elegant accessories.</p>
-
-<h3>4. Hobby-Related Gifts</h3>
-<p>If they're passionate about something, lean into it. Whether it's gardening, cooking, reading, or crafting, there's always equipment, supplies, or accessories they'd appreciate.</p>
-
-<h3>5. Subscription Services</h3>
-<p>Gifts that keep giving month after month. From streaming services to book clubs, coffee deliveries to online courses, subscriptions show ongoing thoughtfulness.</p>
-
-<h2>Making Your Gift Extra Special</h2>
-
-<p>The presentation matters almost as much as the gift itself. Take time to wrap it beautifully, include a heartfelt card, and consider adding a personal voice message with SayPlay's NFC technology. These small touches elevate your gift from good to unforgettable.</p>
-
-<h2>Timing Your Purchase</h2>
-
-<p>Don't wait until the last minute. Shopping early gives you time to find the perfect item, allows for shipping delays, and reduces stress. Plus, you can often find better deals when you're not shopping in a panic.</p>
-
-<h2>Budget-Friendly Options</h2>
-
-<p>Meaningful gifts don't require a huge budget. Handmade items, thoughtful letters, photo albums, or experiences you can share together often mean more than expensive purchases. It's the thought and effort that count.</p>
-
-<h2>Final Thoughts</h2>
-
-<p>Remember, the goal isn't perfection - it's showing someone you care. Whether you choose something practical, sentimental, or fun, what matters most is the love and thought behind it. Take your time, trust your instincts, and don't be afraid to get creative.</p>
-
-<div style="border-top: 2px solid #667eea; margin-top: 2rem; padding-top: 1rem;">
-<p><strong>💝 Make Every Gift Special with SayPlay</strong></p>
-<p>Add a personal voice message to any gift with our NFC technology. No app needed - just tap and play! 
-Visit <a href="https://sayplay.gift" style="color: #667eea;">sayplay.gift</a> to learn more.</p>
-</div>
-
-<!-- Generated: {unique_id} at {datetime.now().isoformat()} -->
-</article>""",
-            'word_count': 650,
-            'keyword': topic['keyword'],
-            'unique_id': unique_id
-        }
-
-def send_telegram_notification(message: str):
-    token = os.getenv('TELEGRAM_BOT_TOKEN')
-    chat_id = os.getenv('TELEGRAM_CHAT_ID')
+def generate_fallback_article(topic: dict) -> dict:
+    """Fallback article if Gemini fails"""
     
-    if not token or not chat_id:
-        print("Telegram not configured")
+    content = f"""Finding the perfect {topic['keyword']} requires thoughtfulness and care. Whether you're celebrating a special occasion or simply want to show someone you care, the right gift can create lasting memories.
+
+## Understanding What Makes a Great Gift
+
+The best gifts are those that show you truly know the recipient. Consider their interests, hobbies, and what brings them joy. A personalized approach always makes a difference.
+
+## Top Gift Ideas
+
+Here are some thoughtful {topic['keyword']} that stand out:
+
+**Personalized Items**: Custom jewelry, engraved accessories, or photo gifts add a special touch that shows extra thought and care.
+
+**Experience Gifts**: Concert tickets, cooking classes, or adventure days create memories that last far longer than physical items.
+
+**Handmade Gifts**: Something crafted by hand, whether it's baked goods, knitted items, or artwork, carries emotional value.
+
+**Tech Gadgets**: For the tech-savvy person, the latest devices or accessories can be both practical and exciting.
+
+**Wellness Gifts**: Spa vouchers, massage sessions, or wellness subscriptions show you care about their wellbeing.
+
+## Adding a Personal Touch
+
+The key to making any gift special is personalization. Add a heartfelt card, include a meaningful message, or present it in a memorable way.
+
+With SayPlay's voice message technology, you can add your voice to any gift. Simply record a personal message, and the recipient can play it with a tap of their phone. No app needed - just pure emotion and connection.
+
+## Making It Memorable
+
+Remember, it's not about how much you spend, but about the thought behind the gift. Choose something that reflects your relationship and shows genuine care."""
+
+    sections = [
+        {'title': 'Understanding What Makes a Great Gift', 'content': 'The best gifts are those that show you truly know the recipient.'},
+        {'title': 'Top Gift Ideas', 'content': 'Here are some thoughtful options that stand out.'},
+        {'title': 'Adding a Personal Touch', 'content': 'The key to making any gift special is personalization.'}
+    ]
+    
+    return {
+        'title': topic['title'],
+        'text': content,
+        'sections': sections,
+        'word_count': len(content.split()),
+        'keyword': topic['keyword']
+    }
+
+
+def create_professional_html(article: dict, topic: dict, hero_base64: str, slug: str) -> str:
+    """Create professional HTML with hero image"""
+    
+    html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{article['text'][:160]}...">
+    <meta name="keywords" content="{topic['keyword']}, personalized gifts, sayplay, voice messages">
+    <title>{article['title']} | SayPlay Gift Guide</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.8;
+            color: #2d3748;
+            background: #f7fafc;
+        }}
+        
+        .hero {{
+            position: relative;
+            height: 600px;
+            background: url('data:image/jpeg;base64,{hero_base64}') center/cover no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+        
+        .hero-overlay {{
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%);
+        }}
+        
+        .hero-content {{
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            color: white;
+            max-width: 900px;
+            padding: 0 30px;
+        }}
+        
+        .logo {{
+            font-size: 56px;
+            font-weight: 800;
+            margin-bottom: 25px;
+            text-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+            letter-spacing: -1px;
+        }}
+        
+        .logo span {{ color: #FFD700; }}
+        
+        h1 {{
+            font-size: 56px;
+            font-weight: 900;
+            margin-bottom: 25px;
+            line-height: 1.15;
+            text-shadow: 2px 2px 12px rgba(0,0,0,0.6);
+            letter-spacing: -0.5px;
+        }}
+        
+        .meta {{
+            display: flex;
+            justify-content: center;
+            gap: 35px;
+            flex-wrap: wrap;
+            font-size: 17px;
+            opacity: 0.95;
+        }}
+        
+        .meta-item {{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }}
+        
+        .container {{
+            max-width: 900px;
+            margin: -120px auto 80px;
+            background: white;
+            border-radius: 25px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.15);
+            padding: 70px 60px;
+            position: relative;
+            z-index: 3;
+        }}
+        
+        .content h2 {{
+            color: #667eea;
+            font-size: 36px;
+            font-weight: 800;
+            margin: 60px 0 30px;
+            padding-bottom: 18px;
+            border-bottom: 4px solid #FFD700;
+            letter-spacing: -0.5px;
+        }}
+        
+        .content h3 {{
+            color: #764ba2;
+            font-size: 26px;
+            font-weight: 700;
+            margin: 40px 0 20px;
+        }}
+        
+        .content p {{
+            margin-bottom: 24px;
+            font-size: 19px;
+            line-height: 1.9;
+            color: #4a5568;
+        }}
+        
+        .content strong {{
+            color: #2d3748;
+            font-weight: 700;
+        }}
+        
+        .cta-section {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 70px 60px;
+            border-radius: 25px;
+            margin: 70px 0;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(102, 126, 234, 0.35);
+        }}
+        
+        .cta-icon {{
+            font-size: 90px;
+            margin-bottom: 30px;
+            animation: bounce 2s infinite;
+        }}
+        
+        @keyframes bounce {{
+            0%, 100% {{ transform: translateY(0); }}
+            50% {{ transform: translateY(-15px); }}
+        }}
+        
+        .cta-section h3 {{
+            color: white;
+            font-size: 42px;
+            margin: 0 0 25px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+        }}
+        
+        .cta-section p {{
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 22px;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }}
+        
+        .cta-button {{
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+            background: white;
+            color: #667eea;
+            padding: 22px 55px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 22px;
+            transition: all 0.3s ease;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.25);
+        }}
+        
+        .cta-button:hover {{
+            transform: translateY(-4px);
+            box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+        }}
+        
+        .features {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 35px;
+            margin: 60px 0;
+        }}
+        
+        .feature {{
+            text-align: center;
+            padding: 35px;
+            background: #f7fafc;
+            border-radius: 20px;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }}
+        
+        .feature:hover {{
+            transform: translateY(-8px);
+            border-color: #667eea;
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.15);
+        }}
+        
+        .feature i {{
+            font-size: 56px;
+            color: #667eea;
+            margin-bottom: 25px;
+        }}
+        
+        .feature h4 {{
+            color: #2d3748;
+            font-size: 22px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }}
+        
+        .feature p {{
+            color: #718096;
+            font-size: 17px;
+            margin: 0;
+            line-height: 1.6;
+        }}
+        
+        .back-link {{
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 17px;
+            margin-bottom: 30px;
+            transition: gap 0.3s;
+        }}
+        
+        .back-link:hover {{
+            gap: 15px;
+        }}
+        
+        @media (max-width: 768px) {{
+            .hero {{ height: 450px; }}
+            h1 {{ font-size: 36px; }}
+            .logo {{ font-size: 42px; }}
+            .container {{
+                padding: 45px 30px;
+                margin: -70px 20px 50px;
+                border-radius: 20px;
+            }}
+            .content h2 {{ font-size: 28px; }}
+            .content p {{ font-size: 17px; }}
+            .cta-section {{ padding: 50px 35px; }}
+            .cta-section h3 {{ font-size: 32px; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="logo">Say<span>Play</span></div>
+            <h1>{article['title']}</h1>
+            <div class="meta">
+                <span class="meta-item">
+                    <i class="far fa-calendar-alt"></i>
+                    {datetime.now().strftime("%B %d, %Y")}
+                </span>
+                <span class="meta-item">
+                    <i class="far fa-clock"></i>
+                    {max(1, article['word_count'] // 200)} min read
+                </span>
+                <span class="meta-item">
+                    <i class="fas fa-tags"></i>
+                    {topic['category']}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <a href="/blog" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Back to all articles
+        </a>
+        
+        <div class="content">
+'''
+    
+    # Add article sections
+    for section in article['sections']:
+        if section['title']:
+            html += f"<h2>{section['title']}</h2>\n"
+        
+        paragraphs = section['content'].strip().split('\n')
+        for para in paragraphs:
+            para = para.strip()
+            if para:
+                # Check if it's a bullet point
+                if para.startswith('**') and para.endswith('**'):
+                    html += f"<h3>{para.replace('**', '')}</h3>\n"
+                elif para.startswith('-') or para.startswith('*'):
+                    html += f"<p><strong>•</strong> {para[1:].strip()}</p>\n"
+                else:
+                    html += f"<p>{para}</p>\n"
+    
+    html += f'''
+            <div class="cta-section">
+                <div class="cta-icon">
+                    <i class="fas fa-gift"></i>
+                </div>
+                <h3>Make Every Gift Unforgettable</h3>
+                <p>Transform any gift into a cherished memory with SayPlay's voice message technology. Record your heartfelt message and let it play with a simple tap. No app needed!</p>
+                <a href="https://sayplay.co.uk" class="cta-button">
+                    Discover SayPlay
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <i class="fas fa-mobile-alt"></i>
+                    <h4>Tap & Play</h4>
+                    <p>No app needed. Just tap with any smartphone.</p>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-heart"></i>
+                    <h4>Personal Touch</h4>
+                    <p>Record your heartfelt message in seconds.</p>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-infinity"></i>
+                    <h4>Lasts Forever</h4>
+                    <p>Your voice message never expires.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>'''
+    
+    return html
+
+
+def generate_seo_pages(output_dir: Path) -> List[Dict]:
+    """Generate 100 SEO landing pages with FULL content"""
+    
+    print(f"\n{'='*70}")
+    print("GENERATING SEO LANDING PAGES")
+    print(f"{'='*70}")
+    
+    seo_dir = output_dir / 'web' / 'seo'
+    seo_dir.mkdir(parents=True, exist_ok=True)
+    
+    # UK Cities
+    cities = [
+        'London', 'Manchester', 'Birmingham', 'Liverpool', 'Leeds',
+        'Glasgow', 'Edinburgh', 'Bristol', 'Cardiff', 'Sheffield',
+        'Newcastle', 'Belfast', 'Brighton', 'Oxford', 'Cambridge',
+        'York', 'Bath', 'Nottingham', 'Leicester', 'Southampton'
+    ]
+    
+    # Gift types
+    gift_types = [
+        {'slug': 'birthday-gifts', 'title': 'Birthday Gifts', 'emoji': '🎂'},
+        {'slug': 'anniversary-gifts', 'title': 'Anniversary Gifts', 'emoji': '💑'},
+        {'slug': 'wedding-gifts', 'title': 'Wedding Gifts', 'emoji': '💍'},
+        {'slug': 'christmas-gifts', 'title': 'Christmas Gifts', 'emoji': '🎄'},
+        {'slug': 'mothers-day-gifts', 'title': "Mother's Day Gifts", 'emoji': '🌸'}
+    ]
+    
+    pages = []
+    
+    for city in cities:
+        for gift_type in gift_types:
+            slug = f"{gift_type['slug']}-{city.lower().replace(' ', '-')}"
+            
+            # Create FULL content page
+            html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{gift_type['title']} in {city} | SayPlay Gift Guide</title>
+    <meta name="description" content="Find perfect {gift_type['title'].lower()} in {city}. Personalized voice message gifts that create lasting memories. Browse unique gift ideas with SayPlay.">
+    <meta name="keywords" content="{gift_type['slug']}, {city}, personalized gifts, voice messages, sayplay">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+            line-height: 1.8;
+            color: #2d3748;
+        }}
+        .hero {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 30px;
+            text-align: center;
+        }}
+        .logo {{
+            font-size: 56px;
+            font-weight: 800;
+            margin-bottom: 25px;
+            letter-spacing: -1px;
+        }}
+        .logo span {{ color: #FFD700; }}
+        h1 {{
+            font-size: 48px;
+            margin: 25px 0;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+        }}
+        .hero p {{
+            font-size: 22px;
+            opacity: 0.95;
+        }}
+        .container {{
+            max-width: 1000px;
+            margin: 80px auto;
+            padding: 0 30px;
+        }}
+        h2 {{
+            color: #667eea;
+            font-size: 36px;
+            margin: 50px 0 25px;
+            font-weight: 800;
+        }}
+        p {{
+            font-size: 19px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+            color: #4a5568;
+        }}
+        .gift-ideas {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 50px 0;
+        }}
+        .gift-card {{
+            background: #f7fafc;
+            padding: 35px;
+            border-radius: 20px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+        }}
+        .gift-card:hover {{
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.15);
+        }}
+        .gift-card i {{
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 20px;
+        }}
+        .gift-card h3 {{
+            color: #2d3748;
+            font-size: 22px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }}
+        .cta {{
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 70px 50px;
+            border-radius: 25px;
+            text-align: center;
+            margin: 70px 0;
+            box-shadow: 0 20px 50px rgba(102, 126, 234, 0.35);
+        }}
+        .cta i {{
+            font-size: 80px;
+            margin-bottom: 25px;
+        }}
+        .cta h3 {{
+            color: white;
+            font-size: 38px;
+            margin-bottom: 20px;
+            font-weight: 900;
+        }}
+        .cta p {{
+            color: white;
+            font-size: 20px;
+            margin-bottom: 35px;
+        }}
+        .cta a {{
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            color: #667eea;
+            padding: 20px 50px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 20px;
+            transition: all 0.3s;
+        }}
+        .cta a:hover {{
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }}
+        .back-link {{
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 17px;
+            margin-bottom: 30px;
+        }}
+        @media (max-width: 768px) {{
+            .hero {{ padding: 70px 20px; }}
+            h1 {{ font-size: 36px; }}
+            .logo {{ font-size: 42px; }}
+            .container {{ padding: 0 20px; }}
+            .gift-ideas {{ grid-template-columns: 1fr; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="logo">Say<span>Play</span></div>
+        <h1>{gift_type['emoji']} {gift_type['title']} in {city}</h1>
+        <p>Personalized Gifts with Voice Messages</p>
+    </div>
+    
+    <div class="container">
+        <a href="/seo" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Back to all locations
+        </a>
+        
+        <h2>Find Perfect {gift_type['title']} in {city}</h2>
+        
+        <p>Looking for unique {gift_type['title'].lower()} in {city}? You're in the right place. Whether you're shopping in the city center or browsing online, finding a gift that truly resonates can transform a special occasion into an unforgettable memory.</p>
+        
+        <p>At SayPlay, we believe the best gifts combine thoughtfulness with personalization. That's why we've created a way to add your voice to any gift, making it truly one-of-a-kind.</p>
+        
+        <h2>Why Personalized Gifts Matter</h2>
+        
+        <p>In {city}, you have access to countless shops and gift options. But what makes a gift truly special isn't just what you buy—it's how you present it and the personal touch you add.</p>
+        
+        <p>A voice message transforms any gift into something extraordinary. Imagine your loved one hearing your voice every time they look at their gift. Whether it's a heartfelt message, a favorite memory, or even a song, your voice adds emotion that lasts forever.</p>
+        
+        <h2>Popular Gift Ideas in {city}</h2>
+        
+        <div class="gift-ideas">
+            <div class="gift-card">
+                <i class="fas fa-gem"></i>
+                <h3>Personalized Jewelry</h3>
+                <p>Add a voice message to a beautiful necklace or bracelet. Perfect for creating lasting memories.</p>
+            </div>
+            <div class="gift-card">
+                <i class="fas fa-image"></i>
+                <h3>Photo Frames</h3>
+                <p>Combine cherished photos with your personal message. Great for any occasion.</p>
+            </div>
+            <div class="gift-card">
+                <i class="fas fa-spa"></i>
+                <h3>Spa & Wellness</h3>
+                <p>Pair a relaxing experience with an encouraging voice message for extra thoughtfulness.</p>
+            </div>
+            <div class="gift-card">
+                <i class="fas fa-book"></i>
+                <h3>Books & Journals</h3>
+                <p>Add your voice to a meaningful book or journal for a truly personal touch.</p>
+            </div>
+            <div class="gift-card">
+                <i class="fas fa-mug-hot"></i>
+                <h3>Personalized Items</h3>
+                <p>From mugs to keepsakes, add your voice to make everyday items extraordinary.</p>
+            </div>
+            <div class="gift-card">
+                <i class="fas fa-seedling"></i>
+                <h3>Plants & Flowers</h3>
+                <p>Living gifts with a voice message create memories that grow over time.</p>
+            </div>
+        </div>
+        
+        <h2>How SayPlay Works</h2>
+        
+        <p><strong>1. Record Your Message:</strong> Use your phone to record a heartfelt message, memory, or greeting—up to 3 minutes long.</p>
+        
+        <p><strong>2. Attach to Your Gift:</strong> Place the SayPlay NFC sticker anywhere on your gift. It works with any present, any packaging.</p>
+        
+        <p><strong>3. They Tap & Listen:</strong> When they receive their gift, they simply tap their phone on the sticker. Your voice plays instantly—no app needed.</p>
+        
+        <h2>Shopping in {city}</h2>
+        
+        <p>Whether you're browsing local {city} shops or ordering online, SayPlay works with any gift you choose. Visit boutiques, department stores, or craft markets—then add your personal voice message to make it unforgettable.</p>
+        
+        <p>Popular shopping areas in {city} offer countless gift options, but the real magic happens when you add your voice. It's the difference between giving a gift and creating a memory.</p>
+        
+        <div class="cta">
+            <i class="fas fa-gift"></i>
+            <h3>Make Your Gift Special</h3>
+            <p>Add a personal voice message to any gift in {city}</p>
+            <a href="https://sayplay.co.uk">
+                Get Started with SayPlay
+                <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        
+        <h2>Why Choose SayPlay</h2>
+        
+        <p><strong>No App Required:</strong> Works with any smartphone—iPhone or Android. Just tap and play.</p>
+        
+        <p><strong>Your Voice, Forever:</strong> Messages never expire. They can hear your voice whenever they want.</p>
+        
+        <p><strong>Perfect for Any Occasion:</strong> {gift_type['title']}, anniversaries, celebrations, or "just because" moments.</p>
+        
+        <p><strong>Privacy Protected:</strong> Your message is secure and can only be accessed by tapping the NFC sticker.</p>
+        
+        <p>Transform your next gift in {city} into an unforgettable memory. With SayPlay, you're not just giving a present—you're giving your voice, your emotion, and a moment that lasts forever.</p>
+    </div>
+</body>
+</html>'''
+            
+            # Save page
+            with open(seo_dir / f'{slug}.html', 'w', encoding='utf-8') as f:
+                f.write(html)
+            
+            pages.append({
+                'slug': slug,
+                'title': f"{gift_type['title']} in {city}",
+                'city': city,
+                'category': gift_type['title'],
+                'url': f"/seo/{slug}.html"
+            })
+    
+    print(f"✅ Generated {len(pages)} SEO pages with full content")
+    
+    return pages
+
+
+def create_seo_index(pages: List[Dict], output_dir: Path):
+    """Create index page for all SEO pages"""
+    
+    print("📄 Creating SEO index page...")
+    
+    seo_dir = output_dir / 'web' / 'seo'
+    
+    # Group by city
+    cities = {}
+    for page in pages:
+        city = page['city']
+        if city not in cities:
+            cities[city] = []
+        cities[city].append(page)
+    
+    html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gift Guides by Location | SayPlay</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }}
+        .container {{
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.3);
+        }}
+        .logo {{
+            font-size: 56px;
+            font-weight: 800;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 15px;
+        }}
+        .logo span {{ color: #FFD700; }}
+        h1 {{
+            text-align: center;
+            color: #2d3748;
+            font-size: 42px;
+            margin-bottom: 15px;
+            font-weight: 900;
+        }}
+        .subtitle {{
+            text-align: center;
+            color: #718096;
+            font-size: 20px;
+            margin-bottom: 50px;
+        }}
+        .stats {{
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 60px;
+            flex-wrap: wrap;
+        }}
+        .stat {{
+            text-align: center;
+        }}
+        .stat-number {{
+            font-size: 48px;
+            font-weight: 800;
+            color: #667eea;
+        }}
+        .stat-label {{
+            color: #718096;
+            font-size: 16px;
+            margin-top: 8px;
+        }}
+        .city-section {{
+            margin-bottom: 50px;
+        }}
+        .city-title {{
+            color: #667eea;
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 25px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #FFD700;
+        }}
+        .links-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }}
+        .link-card {{
+            background: #f7fafc;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: block;
+        }}
+        .link-card:hover {{
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+        }}
+        .link-card h3 {{
+            color: #2d3748;
+            font-size: 20px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }}
+        .link-card p {{
+            color: #718096;
+            font-size: 15px;
+            margin: 0;
+        }}
+        @media (max-width: 768px) {{
+            .container {{ padding: 30px 20px; }}
+            .logo {{ font-size: 42px; }}
+            h1 {{ font-size: 32px; }}
+            .links-grid {{ grid-template-columns: 1fr; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Say<span>Play</span></div>
+        <h1><i class="fas fa-map-marker-alt"></i> Gift Guides by Location</h1>
+        <p class="subtitle">Find perfect personalized gifts in your city</p>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number">{len(cities)}</div>
+                <div class="stat-label">UK Cities</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">{len(pages)}</div>
+                <div class="stat-label">Gift Guides</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">5</div>
+                <div class="stat-label">Categories</div>
+            </div>
+        </div>
+'''
+    
+    # Add city sections
+    for city in sorted(cities.keys()):
+        html += f'''
+        <div class="city-section">
+            <h2 class="city-title">{city}</h2>
+            <div class="links-grid">'''
+        
+        for page in sorted(cities[city], key=lambda x: x['category']):
+            html += f'''
+                <a href="{page['url']}" class="link-card">
+                    <h3><i class="fas fa-gift"></i> {page['title']}</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>'''
+        
+        html += '''
+            </div>
+        </div>'''
+    
+    html += '''
+    </div>
+</body>
+</html>'''
+    
+    with open(seo_dir / 'index.html', 'w', encoding='utf-8') as f:
+        f.write(html)
+    
+    print(f"✅ SEO index created at /seo")
+
+
+def create_blog_index(topics: List[Dict], output_dir: Path):
+    """Create index page for all blog articles"""
+    
+    print("📄 Creating blog index page...")
+    
+    blog_dir = output_dir / 'web' / 'blog'
+    
+    html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gift Guide Blog | SayPlay</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }}
+        .container {{
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.3);
+        }}
+        .logo {{
+            font-size: 56px;
+            font-weight: 800;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 15px;
+        }}
+        .logo span {{ color: #FFD700; }}
+        h1 {{
+            text-align: center;
+            color: #2d3748;
+            font-size: 42px;
+            margin-bottom: 15px;
+            font-weight: 900;
+        }}
+        .subtitle {{
+            text-align: center;
+            color: #718096;
+            font-size: 20px;
+            margin-bottom: 60px;
+        }}
+        .articles-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 30px;
+        }}
+        .article-card {{
+            background: #f7fafc;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: block;
+        }}
+        .article-card:hover {{
+            border-color: #667eea;
+            transform: translateY(-8px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.2);
+        }}
+        .article-header {{
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            position: relative;
+        }}
+        .episode-badge {{
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.25);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+        }}
+        .article-card h3 {{
+            color: white;
+            font-size: 24px;
+            margin: 0;
+            font-weight: 800;
+            line-height: 1.3;
+        }}
+        .article-body {{
+            padding: 30px;
+        }}
+        .article-meta {{
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            font-size: 15px;
+            color: #718096;
+        }}
+        .article-meta span {{
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }}
+        .article-excerpt {{
+            color: #4a5568;
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }}
+        .read-more {{
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #667eea;
+            font-weight: 700;
+            font-size: 16px;
+        }}
+        @media (max-width: 768px) {{
+            .container {{ padding: 30px 20px; }}
+            .articles-grid {{ grid-template-columns: 1fr; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Say<span>Play</span></div>
+        <h1><i class="fas fa-newspaper"></i> Gift Guide Blog</h1>
+        <p class="subtitle">Expert tips and ideas for perfect personalized gifts</p>
+        
+        <div class="articles-grid">'''
+    
+    for i, topic in enumerate(topics, 1):
+        slug = topic['title'].lower().replace(' ', '-').replace("'", '').replace(':', '')[:60]
+        
+        excerpt = f"Discover the best {topic['keyword']} that create lasting memories. Learn how to choose meaningful gifts and add a personal touch."
+        
+        html += f'''
+            <a href="/blog/{slug}.html" class="article-card">
+                <div class="article-header">
+                    <div class="episode-badge">Episode {i}</div>
+                    <h3>{topic['title']}</h3>
+                </div>
+                <div class="article-body">
+                    <div class="article-meta">
+                        <span><i class="fas fa-tag"></i> {topic['category']}</span>
+                        <span><i class="far fa-clock"></i> 8 min read</span>
+                    </div>
+                    <p class="article-excerpt">{excerpt}</p>
+                    <span class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>'''
+    
+    html += '''
+        </div>
+    </div>
+</body>
+</html>'''
+    
+    with open(blog_dir / 'index.html', 'w', encoding='utf-8') as f:
+        f.write(html)
+    
+    print(f"✅ Blog index created at /blog")
+
+
+def create_rss_feed(podcasts: List[Dict], output_file: Path):
+    """Generate RSS feed for podcasts"""
+    
+    if not podcasts:
         return
     
-    try:
-        url = f"https://api.telegram.org/bot{token}/sendMessage"
-        data = {'chat_id': chat_id, 'text': message, 'parse_mode': 'HTML'}
-        requests.post(url, data=data, timeout=10)
-    except Exception as e:
-        print(f"Telegram failed: {e}")
-
-
-def main():
-    mode_name = "ENHANCED" if GOOGLE_ENHANCED else "ZERO-COST"
+    print(f"\n📡 Generating RSS feed...")
     
+    from xml.etree.ElementTree import Element, SubElement, tostring
+    from xml.dom import minidom
+    
+    rss = Element('rss', {'version': '2.0', 'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd'})
+    channel = SubElement(rss, 'channel')
+    
+    SubElement(channel, 'title').text = 'SayPlay Gift Guide Podcast'
+    SubElement(channel, 'description').text = 'Your daily guide to finding perfect personalized gifts with expert tips and ideas.'
+    SubElement(channel, 'link').text = 'https://dashboard.sayplay.co.uk'
+    SubElement(channel, 'language').text = 'en-GB'
+    SubElement(channel, 'itunes:author').text = 'SayPlay - VoiceGift UK'
+    SubElement(channel, 'itunes:summary').text = 'Expert gift-giving advice and inspiration'
+    
+    for podcast in podcasts:
+        item = SubElement(channel, 'item')
+        SubElement(item, 'title').text = podcast['title']
+        SubElement(item, 'description').text = f"Episode {podcast['episode']}: {podcast['title']}"
+        SubElement(item, 'enclosure', {
+            'url': f"https://dashboard.sayplay.co.uk/podcasts/{podcast['filename']}",
+            'length': str(podcast['size']),
+            'type': 'audio/mpeg'
+        })
+        SubElement(item, 'itunes:duration').text = str(podcast['duration'])
+        SubElement(item, 'pubDate').text = datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+    
+    xml_string = minidom.parseString(tostring(rss, 'utf-8')).toprettyxml(indent='  ')
+    
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(xml_string)
+    
+    print(f"✅ RSS feed generated ({len(podcasts)} episodes)")
+
+
+async def main():
     print("\n" + "="*70)
-    print(f"TITAN MASTER ORCHESTRATOR - {mode_name} MODE")
+    print("TITAN V2 - COMPLETE PROFESSIONAL SYSTEM")
     print("="*70)
-    print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}")
-    if GOOGLE_ENHANCED:
-        print("Monthly Cost: 9.40 GBP (Google APIs with FREE $200 credit)")
-        print("Enhanced Features: Visual Emails, Perfect Timing, Address Validation")
-    else:
-        print("Monthly Cost: 0.00 GBP")
-    if B2B_BULLETPROOF:
-        print("B2B: Bulletproof email validation (7 levels)")
-    print("="*70 + "\n")
     
-    print("Modules Loaded:")
-    for module, loaded in modules_loaded.items():
-        status = "OK" if loaded else "SKIP"
-        print(f"   [{status}] {module}")
-    if B2B_BULLETPROOF:
-        print(f"   [OK] b2b_bulletproof")
-    print()
+    start_time = datetime.now()
     
-    results = {
-        'start_time': datetime.now(),
-        'modules_run': 0,
-        'outputs': {}
-    }
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H%M')
+    output_dir = Path(f'TITAN_OUTPUT_{timestamp}')
+    output_dir.mkdir(exist_ok=True)
     
-    try:
-        if modules_loaded['brand']:
-            print("MODULE 1: BRAND IDENTITY CORE")
-            print("-" * 70)
-            
-            brand = BrandIdentityCore()
-            infringements = brand.monitor_trademark_infringement()
-            
-            results['outputs']['brand'] = {'infringements_detected': len(infringements)}
-            results['modules_run'] += 1
-            print(f"Brand protection active")
-            print(f"Infringements: {len(infringements)}")
-            print()
+    # Create structure
+    web_dir = output_dir / 'web'
+    blog_dir = web_dir / 'blog'
+    dashboard_dir = web_dir / 'dashboard'
+    podcast_dir = web_dir / 'podcasts'
+    seo_dir = web_dir / 'seo'
+    
+    for d in [web_dir, blog_dir, dashboard_dir, podcast_dir, seo_dir]:
+        d.mkdir(parents=True, exist_ok=True)
+    
+    # Initialize
+    topic_gen = MultiTopicGenerator()
+    topics = topic_gen.generate_daily_topics(count=10)
+    
+    gemini_key = os.getenv('GEMINI_API_KEY')
+    image_gen = ProfessionalImageGenerator()
+    podcast_gen = LongFormPodcastGenerator()
+    
+    podcasts_list = []
+    
+    # Generate content for each topic
+    for i, topic in enumerate(topics, 1):
+        print(f"\n{'='*70}")
+        print(f"TOPIC {i}/10: {topic['title']}")
+        print(f"{'='*70}")
         
-        # ================================================================
-        # MODULE 2: BLOG ENGINE - DIRECT GEMINI CALL
-        # ================================================================
-        if modules_loaded['blog']:
-            print("MODULE 2: BLOG ENGINE (Gemini Direct - FREE)")
-            print("-" * 70)
-            
-            topic = generate_topic()
-            
-            gemini_key = os.getenv('GEMINI_API_KEY')
-            if gemini_key:
-                article = generate_article_with_gemini(topic, gemini_key)
-                
-                if modules_loaded['brand']:
-                    try:
-                        article = brand.apply_brand_identity(article, 'html')
-                    except:
-                        pass
-                
-                results['outputs']['blog'] = {
-                    'title': article.get('title', 'Untitled'),
-                    'keyword': topic.get('keyword', 'N/A'),
-                    'word_count': article.get('word_count', 0),
-                    'unique_id': article.get('unique_id', 'N/A')
-                }
-                results['modules_run'] += 1
-                print(f"Title: {article.get('title', '')[:60]}...")
-                print(f"Words: {article.get('word_count', 0)}")
-                print(f"Unique ID: {article.get('unique_id', 'N/A')}")
-            else:
-                print("⚠️ GEMINI_API_KEY not set, using fallback")
-                article = generate_article_with_gemini(topic, "")
-            
-            print()
-        else:
-            article = {'title': 'Test Article', 'text': 'Test content', 'html': '<p>Test</p>'}
-            topic = {'keyword': 'gifts'}
+        # Generate article
+        print("  📝 Generating article...")
+        article = generate_article_with_gemini(topic, gemini_key)
         
-        # ================================================================
-        # MODULE 4: IMAGE ENGINE - RETRY LOGIC + UNIQUE PROMPTS
-        # ================================================================
-        if modules_loaded['images']:
-            print("MODULE 4: IMAGE ENGINE (Pollinations.ai - FREE)")
-            print("-" * 70)
-            
+        # Generate hero image
+        hero_image = image_gen.generate_hero_image(topic['keyword'])
+        hero_base64 = base64.b64encode(hero_image).decode('utf-8')
+        
+        # Create HTML
+        slug = topic['title'].lower().replace(' ', '-').replace("'", '').replace(':', '')[:60]
+        html = create_professional_html(article, topic, hero_base64, slug)
+        
+        with open(blog_dir / f'{slug}.html', 'w', encoding='utf-8') as f:
+            f.write(html)
+        
+        # Generate podcast
+        if EDGE_TTS_AVAILABLE:
             try:
-                # Generate UNIQUE prompts for variety
-                unique_descriptors = [
-                    "warm natural lighting, professional photography",
-                    "soft focus, elegant composition, artistic",
-                    "modern minimalist style, clean aesthetic",
-                    "heartwarming emotional scene, cinematic",
-                    "vibrant colors, lifestyle magazine quality"
-                ]
-                
-                image_prompts = [
-                    f"{topic.get('keyword', 'gift')}, {desc}, high quality 4k"
-                    for desc in random.sample(unique_descriptors, 3)
-                ]
-                
-                images = []
-                
-                for i, prompt in enumerate(image_prompts):
-                    print(f"Generating image {i+1}/3: {prompt[:50]}...")
+                podcast = await podcast_gen.generate_podcast(article, topic, i)
+                if podcast:
+                    podcast_filename = f'episode-{i:02d}-{slug[:30]}.mp3'
+                    podcast_file = podcast_dir / podcast_filename
                     
-                    # Retry logic with increased timeout
-                    max_retries = 2
-                    for attempt in range(max_retries):
-                        try:
-                            # Pollinations.ai URL
-                            url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}"
-                            
-                            response = requests.get(url, timeout=60)  # 60s timeout
-                            
-                            if response.status_code == 200 and len(response.content) > 1000:
-                                images.append(response.content)
-                                print(f"  ✅ Image {i+1} generated ({len(response.content)//1024}KB)")
-                                break
-                            else:
-                                print(f"  ⚠️ Attempt {attempt+1} failed: status {response.status_code}")
-                                
-                        except Exception as e:
-                            print(f"  ⚠️ Attempt {attempt+1} error: {str(e)[:50]}")
-                            
-                        if attempt < max_retries - 1:
-                            import time
-                            time.sleep(3)
-                
-                if len(images) == 0:
-                    print(f"⚠️ All image generation attempts failed")
-                    print(f"⚠️ Continuing without images...")
-                
-                results['outputs']['images'] = {
-                    'prompts': image_prompts,
-                    'variants_generated': len(images)
-                }
-                
-                if len(images) > 0:
-                    results['modules_run'] += 1
-                    print(f"✅ Successfully generated {len(images)}/3 unique images")
-                
-            except Exception as e:
-                print(f"Image generation error: {e}")
-                images = []
-            
-            print()
-        else:
-            images = []
-        
-        # ================================================================
-        # MODULE 5: AUDIO - BETTER VOICES (British Neural)
-        # ================================================================
-        if modules_loaded['audio']:
-            print("MODULE 5: AUDIO-INCEPTION (Edge-TTS Premium Voices - FREE)")
-            print("-" * 70)
-            
-            try:
-                import asyncio
-                import edge_tts
-                
-                # PREMIUM VOICES - More natural sounding
-                PREMIUM_VOICES = {
-                    'female': 'en-GB-SoniaNeural',      # British, warm, natural
-                    'male': 'en-GB-RyanNeural'          # British, friendly, clear
-                }
-                
-                # Extract key content from article
-                article_excerpt = article.get('text', '')[:800]  # First 800 chars
-                
-                # Create engaging podcast script with variety
-                podcast_segments = [
-                    {
-                        'text': f"Welcome to the SayPlay Gift Guide! Today we're exploring {topic['keyword']}.",
-                        'voice': PREMIUM_VOICES['female']
-                    },
-                    {
-                        'text': f"That's right! We've put together some fantastic ideas that will truly make an impact.",
-                        'voice': PREMIUM_VOICES['male']
-                    },
-                    {
-                        'text': article_excerpt,
-                        'voice': PREMIUM_VOICES['female']
-                    },
-                    {
-                        'text': "These are wonderful suggestions! What I particularly love is how personal each option is.",
-                        'voice': PREMIUM_VOICES['male']
-                    },
-                    {
-                        'text': "Absolutely! And remember, you can add an even more personal touch with SayPlay's voice message technology.",
-                        'voice': PREMIUM_VOICES['female']
-                    },
-                    {
-                        'text': "Just tap the NFC sticker with your phone to hear your heartfelt message. No app needed!",
-                        'voice': PREMIUM_VOICES['male']
-                    },
-                    {
-                        'text': "Thanks so much for listening! Visit sayplay dot gift to learn more and make your next gift truly unforgettable.",
-                        'voice': PREMIUM_VOICES['female']
-                    }
-                ]
-                
-                # Generate audio segments
-                async def generate_segment(text: str, voice: str) -> bytes:
-                    communicate = edge_tts.Communicate(text, voice)
-                    audio_data = b""
-                    async for chunk in communicate.stream():
-                        if chunk["type"] == "audio":
-                            audio_data += chunk["data"]
-                    return audio_data
-                
-                async def generate_all_segments():
-                    tasks = [generate_segment(seg['text'], seg['voice']) for seg in podcast_segments]
-                    return await asyncio.gather(*tasks)
-                
-                print(f"Generating {len(podcast_segments)} audio segments with premium voices...")
-                audio_segments = asyncio.run(generate_all_segments())
-                
-                # Combine all segments
-                full_audio = b"".join(audio_segments)
-                
-                # Calculate duration (rough estimate: ~12 bytes per millisecond for mp3)
-                duration = len(full_audio) // 12000
-                
-                podcast = {
-                    'audio': full_audio,
-                    'metadata': {
-                        'title': f"Gift Guide: {topic['title']}",
-                        'duration': duration,
-                        'voices': list(PREMIUM_VOICES.values()),
-                        'segments': len(podcast_segments),
-                        'quality': 'Premium British Neural'
-                    }
-                }
-                
-                results['outputs']['podcast'] = {
-                    'title': podcast['metadata']['title'],
-                    'duration': podcast['metadata']['duration'],
-                    'quality': podcast['metadata']['quality']
-                }
-                results['modules_run'] += 1
-                print(f"✅ Podcast created: {duration}s")
-                print(f"✅ Voices: British Neural (premium quality)")
-                print(f"✅ Segments: {len(podcast_segments)}")
-                
-            except Exception as e:
-                print(f"Podcast generation error: {e}")
-                import traceback
-                traceback.print_exc()
-                podcast = None
-            
-            print()
-        
-        if modules_loaded['global']:
-            print("MODULE 6: GLOBAL DOMINATION (Gemini translations - FREE)")
-            print("-" * 70)
-            
-            try:
-                global_engine = GlobalDomination()
-                translations = global_engine.batch_translate_all_markets(article)
-                
-                results['outputs']['translations'] = {
-                    'languages': list(translations.keys()),
-                    'total_reach': sum(
-                        global_engine.TARGET_MARKETS.get(lang, {}).get('population', 0)
-                        for lang in translations.keys() if lang != 'en'
-                    )
-                }
-                results['modules_run'] += 1
-                print(f"Translations complete (Gemini FREE)")
-                print(f"Languages: {', '.join(translations.keys())}")
-            except Exception as e:
-                print(f"Translation error: {e}")
-                translations = {'en': article}
-            
-            print()
-        
-        if modules_loaded['seo']:
-            print("MODULE 7: PROGRAMMATIC SEO")
-            print("-" * 70)
-            
-            try:
-                seo_engine = ProgrammaticSEO()
-                seo_pages = seo_engine.generate_all_pages(max_pages=50)
-                
-                results['outputs']['seo'] = {'pages_generated': len(seo_pages)}
-                results['modules_run'] += 1
-                print(f"SEO pages generated")
-                print(f"Pages: {len(seo_pages)}")
-            except Exception as e:
-                print(f"SEO generation error: {e}")
-            
-            print()
-        
-        if modules_loaded['social']:
-            print("MODULE 8: SOCIAL POSTER (FREE APIs)")
-            print("-" * 70)
-            
-            try:
-                social_engine = SocialPoster()
-                social_results = social_engine.distribute_article(article)
-                
-                results['outputs']['social'] = social_results
-                results['modules_run'] += 1
-                print(f"Social distribution complete")
-            except Exception as e:
-                print(f"Social posting error: {e}")
-            
-            print()
-        
-        # ================================================================
-        # MODULE #9: B2B HUNTER BULLETPROOF
-        # ================================================================
-        if B2B_BULLETPROOF:
-            print("MODULE 9: B2B HUNTER BULLETPROOF")
-            print("-" * 70)
-            
-            try:
-                hunter = B2BHunterBulletproof()
-                
-                stats = hunter.run_campaign(
-                    location='London, UK',
-                    business_type='florist',
-                    max_businesses=30,
-                    max_emails_to_send=5,
-                    dry_run=True  # CHANGE TO False WHEN READY!
-                )
-                
-                results['outputs']['b2b'] = stats
-                results['modules_run'] += 1
-                
-                print(f"\nB2B campaign summary:")
-                print(f"  Businesses found: {stats['businesses_found']}")
-                print(f"  Emails discovered: {stats['emails_discovered']}")
-                print(f"  Emails validated: {stats['emails_validated']}")
-                print(f"  Emails rejected: {stats['emails_rejected']}")
-                print(f"  Emails sent: {stats['emails_sent']}")
-                
-                if stats['emails_discovered'] > 0:
-                    validation_rate = (stats['emails_validated'] / stats['emails_discovered']) * 100
-                    print(f"  Validation rate: {validation_rate:.1f}%")
-                
-            except Exception as e:
-                print(f"B2B hunter error: {e}")
-                import traceback
-                traceback.print_exc()
-            
-            print()
-        else:
-            print("MODULE 9: B2B HUNTER (DISABLED)")
-            print("-" * 70)
-            print("Bulletproof B2B hunter not available")
-            print()
-        
-        if modules_loaded['influencer']:
-            print("MODULE 10: INFLUENCER SCOUT")
-            print("-" * 70)
-            
-            try:
-                qualified = run_influencer_campaign('lifestyle', target_count=30)
-                
-                results['outputs']['influencers'] = {
-                    'found': 60,
-                    'qualified': len(qualified),
-                    'contacted': min(10, len(qualified))
-                }
-                results['modules_run'] += 1
-                print(f"Influencer campaign complete")
-            except Exception as e:
-                print(f"Influencer scout error: {e}")
-            
-            print()
-        
-        if GOOGLE_ENHANCED or 'GiftPrecognition' in dir():
-            print("MODULE 13: GIFT PRECOGNITION" + (" ENHANCED" if GOOGLE_ENHANCED else ""))
-            print("-" * 70)
-            
-            try:
-                precog_engine = GiftPrecognition()
-                upcoming = precog_engine.scan_upcoming_events(days_ahead=14)
-                
-                for event_data in upcoming[:5]:
-                    precog_engine.send_reminder_email(
-                        event_data['customer_id'],
-                        event_data['event']
-                    )
-                
-                results['outputs']['precognition'] = {
-                    'reminders_sent': len(upcoming[:5]),
-                    'enhanced': GOOGLE_ENHANCED
-                }
-                results['modules_run'] += 1
-                print(f"Email reminders sent: {len(upcoming[:5])}")
-                if GOOGLE_ENHANCED:
-                    print(f"Perfect local timing with Time Zone API")
-            except Exception as e:
-                print(f"Gift precognition error: {e}")
-            
-            print()
-        
-        if GOOGLE_ENHANCED:
-            print("MODULE 14: ADDRESS VALIDATION")
-            print("-" * 70)
-            
-            try:
-                validator = AddressValidator()
-                
-                test_address = {
-                    'line1': '10 Downing Street',
-                    'city': 'London',
-                    'postcode': 'SW1A 2AA',
-                    'country': 'GB'
-                }
-                
-                validation = validator.validate_address(test_address)
-                
-                results['outputs']['address_validation'] = {
-                    'tested': True,
-                    'is_valid': validation['is_valid'],
-                    'confidence': validation['confidence']
-                }
-                results['modules_run'] += 1
-                
-                print(f"Address validation active")
-                print(f"Test validation: {validation['confidence']}")
-            except Exception as e:
-                print(f"Address validation error: {e}")
-            
-            print()
-        
-        # ================================================================
-        # SAVE ALL GENERATED CONTENT TO FILES
-        # ================================================================
-        print("\n" + "="*70)
-        print("SAVING CONTENT TO FILES")
-        print("="*70)
-        
-        saved_files = []
-        
-        # Save article
-        if 'blog' in results['outputs']:
-            try:
-                with open('article.html', 'w', encoding='utf-8') as f:
-                    f.write(article.get('html', ''))
-                saved_files.append('article.html')
-                print(f"✅ Saved: article.html ({article.get('word_count', 0)} words)")
-                
-                with open('article.txt', 'w', encoding='utf-8') as f:
-                    f.write(article.get('text', ''))
-                saved_files.append('article.txt')
-                print(f"✅ Saved: article.txt")
-                
-                with open('article_meta.json', 'w') as f:
-                    json.dump({
-                        'title': article.get('title'),
-                        'keyword': topic.get('keyword'),
-                        'word_count': article.get('word_count', 0),
-                        'unique_id': article.get('unique_id'),
-                        'generated_at': datetime.now().isoformat()
-                    }, f, indent=2)
-                saved_files.append('article_meta.json')
-                print(f"✅ Saved: article_meta.json")
-            except Exception as e:
-                print(f"❌ Error saving article: {e}")
-        
-        # Save podcast
-        if 'podcast' in results['outputs'] and podcast:
-            try:
-                if 'audio' in podcast and podcast['audio']:
-                    with open('podcast.mp3', 'wb') as f:
+                    with open(podcast_file, 'wb') as f:
                         f.write(podcast['audio'])
-                    saved_files.append('podcast.mp3')
-                    size_mb = len(podcast['audio']) / (1024 * 1024)
-                    print(f"✅ Saved: podcast.mp3 ({size_mb:.2f}MB, {podcast['metadata']['duration']}s)")
+                    
+                    podcasts_list.append({
+                        'title': topic['title'],
+                        'episode': i,
+                        'filename': podcast_filename,
+                        'size': len(podcast['audio']),
+                        'duration': podcast['duration']
+                    })
             except Exception as e:
-                print(f"❌ Error saving podcast: {e}")
+                print(f"      ⚠️ Podcast error: {str(e)[:100]}")
         
-        # Save translations
-        if 'translations' in results['outputs'] and 'translations' in dir():
-            try:
-                Path('translations').mkdir(exist_ok=True)
-                
-                for lang, content in translations.items():
-                    lang_file = f'translations/article_{lang}.html'
-                    with open(lang_file, 'w', encoding='utf-8') as f:
-                        if isinstance(content, dict):
-                            f.write(content.get('html', content.get('text', '')))
-                        else:
-                            f.write(str(content))
-                    saved_files.append(lang_file)
-                
-                print(f"✅ Saved: {len(translations)} translations")
-            except Exception as e:
-                print(f"❌ Error saving translations: {e}")
+        print(f"  ✅ Complete")
+    
+    # Generate SEO pages
+    seo_pages = generate_seo_pages(output_dir)
+    
+    # Create index pages
+    create_blog_index(topics, output_dir)
+    create_seo_index(seo_pages, output_dir)
+    
+    # Create RSS feed
+    if podcasts_list:
+        create_rss_feed(podcasts_list, web_dir / 'podcast.xml')
+    
+    # Create dashboard
+    print(f"\n{'='*70}")
+    print("CREATING DASHBOARD")
+    print(f"{'='*70}")
+    
+    dashboard_html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SayPlay Content Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; min-height: 100vh; }}
+        .container {{ max-width: 1400px; margin: 0 auto; background: white; border-radius: 25px; padding: 50px; box-shadow: 0 25px 70px rgba(0,0,0,0.3); }}
+        .header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 50px; padding-bottom: 25px; border-bottom: 3px solid #e0e0e0; }}
+        .logo {{ font-size: 56px; font-weight: 800; color: #667eea; }}
+        .logo span {{ color: #FFD700; }}
+        .date {{ color: #718096; font-size: 18px; }}
+        .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 25px; margin: 50px 0; }}
+        .stat {{ background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 35px; border-radius: 20px; text-align: center; transition: transform 0.3s; }}
+        .stat:hover {{ transform: translateY(-8px); }}
+        .stat i {{ font-size: 56px; margin-bottom: 20px; }}
+        .stat-number {{ font-size: 64px; font-weight: 900; margin: 15px 0; }}
+        .stat-label {{ font-size: 18px; opacity: 0.95; }}
+        .section {{ margin: 60px 0; }}
+        .section-title {{ color: #2d3748; font-size: 36px; font-weight: 900; margin-bottom: 30px; display: flex; align-items: center; gap: 15px; }}
+        .quick-links {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; }}
+        .quick-link {{ background: #f7fafc; padding: 30px; border-radius: 20px; border: 2px solid #e0e0e0; text-decoration: none; display: block; transition: all 0.3s; }}
+        .quick-link:hover {{ border-color: #667eea; transform: translateY(-5px); box-shadow: 0 12px 30px rgba(102, 126, 234, 0.15); }}
+        .quick-link h3 {{ color: #2d3748; font-size: 22px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }}
+        .quick-link p {{ color: #718096; font-size: 16px; margin: 0; }}
+        @media (max-width: 768px) {{ .container {{ padding: 30px 20px; }} .header {{ flex-direction: column; gap: 20px; text-align: center; }} }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Say<span>Play</span> Dashboard</div>
+            <div class="date">{datetime.now().strftime("%B %d, %Y %H:%M UTC")}</div>
+        </div>
         
-        # Save images
-        if len(images) > 0:
-            try:
-                Path('images').mkdir(exist_ok=True)
-                
-                for i, img_data in enumerate(images):
-                    img_file = f'images/image_{i+1}.png'
-                    with open(img_file, 'wb') as f:
-                        f.write(img_data)
-                    saved_files.append(img_file)
-                    size_kb = len(img_data) / 1024
-                    print(f"✅ Saved: image_{i+1}.png ({size_kb:.0f}KB)")
-                
-            except Exception as e:
-                print(f"❌ Error saving images: {e}")
-        else:
-            print(f"⚠️  No images to save")
+        <div class="stats">
+            <div class="stat">
+                <i class="fas fa-file-alt"></i>
+                <div class="stat-number">{len(topics)}</div>
+                <div class="stat-label">Blog Articles</div>
+            </div>
+            <div class="stat">
+                <i class="fas fa-microphone-alt"></i>
+                <div class="stat-number">{len(podcasts_list)}</div>
+                <div class="stat-label">Podcasts</div>
+            </div>
+            <div class="stat">
+                <i class="fas fa-search-location"></i>
+                <div class="stat-number">{len(seo_pages)}</div>
+                <div class="stat-label">SEO Pages</div>
+            </div>
+            <div class="stat">
+                <i class="fas fa-check-circle"></i>
+                <div class="stat-number">✓</div>
+                <div class="stat-label">System Active</div>
+            </div>
+        </div>
         
-        # Save SEO summary
-        if 'seo' in results['outputs']:
-            try:
-                with open('seo_pages_summary.json', 'w') as f:
-                    json.dump({
-                        'pages_generated': results['outputs']['seo']['pages_generated'],
-                        'generated_at': datetime.now().isoformat()
-                    }, f, indent=2)
-                saved_files.append('seo_pages_summary.json')
-                print(f"✅ Saved: seo_pages_summary.json")
-            except Exception as e:
-                print(f"❌ Error saving SEO summary: {e}")
+        <div class="section">
+            <h2 class="section-title">
+                <i class="fas fa-link"></i>
+                Quick Links
+            </h2>
+            <div class="quick-links">
+                <a href="/blog" class="quick-link">
+                    <h3><i class="fas fa-newspaper"></i> View All Articles</h3>
+                    <p>{len(topics)} professional blog posts</p>
+                </a>
+                <a href="/seo" class="quick-link">
+                    <h3><i class="fas fa-map-marked-alt"></i> View SEO Pages</h3>
+                    <p>{len(seo_pages)} location-based landing pages</p>
+                </a>
+                <a href="/podcast.xml" class="quick-link">
+                    <h3><i class="fas fa-rss"></i> Podcast RSS Feed</h3>
+                    <p>{len(podcasts_list)} episodes available</p>
+                </a>
+            </div>
+        </div>
         
-        print(f"\n📦 Total files saved: {len(saved_files)}")
-        print(f"📁 Files ready for artifacts upload")
-        print("="*70 + "\n")
-        
-        end_time = datetime.now()
-        duration = (end_time - results['start_time']).total_seconds()
-        
-        print("\n" + "="*70)
-        print(f"TITAN COMPLETE - {mode_name} MODE")
-        print("="*70)
-        print(f"Duration: {duration:.1f}s")
-        print(f"Modules run: {results['modules_run']}")
-        if GOOGLE_ENHANCED:
-            print(f"Mode: Google Enhanced")
-            print(f"Cost: 9.40 GBP/month")
-        else:
-            print(f"Mode: Zero-Cost")
-            print(f"Cost: 0.00 GBP")
-        if B2B_BULLETPROOF:
-            print(f"B2B: Bulletproof validation active")
-        print("="*70)
-        
-        # Telegram notification now sent by workflow AFTER artifacts upload
-        # This ensures artifact download link is available when message arrives
-        # send_telegram_notification(telegram_message)
-        
-        print("\nTelegram notification will be sent by workflow")
-        print("(after artifacts upload with direct download link)")
-        print("\n" + "="*70 + "\n")
-        
-        return 0
-        
-    except Exception as e:
-        error_msg = f"ERROR: {str(e)}"
-        print(f"\n{error_msg}\n")
-        
-        send_telegram_notification(f"<b>❌ Titan Failed</b>\n\nError: {str(e)}")
-        
-        import traceback
-        traceback.print_exc()
-        
-        return 1
+        <div class="section">
+            <h2 class="section-title">
+                <i class="fas fa-chart-line"></i>
+                Performance
+            </h2>
+            <div style="background: #f7fafc; padding: 40px; border-radius: 20px;">
+                <p style="font-size: 18px; color: #4a5568; line-height: 1.8; margin: 0;">
+                    <strong>Content generated:</strong> {len(topics)} unique articles with professional images<br>
+                    <strong>Podcasts created:</strong> {len(podcasts_list)} episodes (3-5 min each)<br>
+                    <strong>SEO coverage:</strong> {len(seo_pages)} location-specific pages<br>
+                    <strong>Total files:</strong> {len(topics) + len(podcasts_list) + len(seo_pages) + 3}<br>
+                    <strong>Generation time:</strong> {int((datetime.now() - start_time).total_seconds() / 60)} minutes
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>'''
+    
+    with open(dashboard_dir / 'index.html', 'w', encoding='utf-8') as f:
+        f.write(dashboard_html)
+    
+    # Final summary
+    duration = (datetime.now() - start_time).total_seconds()
+    
+    print(f"\n{'='*70}")
+    print("TITAN COMPLETE!")
+    print(f"{'='*70}")
+    print(f"✅ {len(topics)} Articles (full content with images)")
+    print(f"✅ {len(podcasts_list)} Podcasts (3-5 min each)")
+    print(f"✅ {len(seo_pages)} SEO Pages (full content)")
+    print(f"✅ 3 Index Pages (blog, seo, dashboard)")
+    print(f"✅ 1 RSS Feed")
+    print(f"\n⏱ Duration: {int(duration // 60)}m {int(duration % 60)}s")
+    print(f"\n🌐 Will be live at: https://dashboard.sayplay.co.uk")
+    print(f"{'='*70}\n")
+    
+    return 0
 
 
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    sys.exit(asyncio.run(main()))
