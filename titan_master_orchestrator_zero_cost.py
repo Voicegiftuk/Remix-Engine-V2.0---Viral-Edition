@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 import random
+import json
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -279,6 +280,7 @@ def main():
                 print(f"Variants: {len(images)} platforms")
             except Exception as e:
                 print(f"Image generation error: {e}")
+                images = []
             
             print()
         
@@ -482,6 +484,105 @@ def main():
                 print(f"Address validation error: {e}")
             
             print()
+        
+        # ================================================================
+        # SAVE ALL GENERATED CONTENT TO FILES
+        # ================================================================
+        print("\n" + "="*70)
+        print("SAVING CONTENT TO FILES")
+        print("="*70)
+        
+        saved_files = []
+        
+        # Save article
+        if 'blog' in results['outputs']:
+            try:
+                with open('article.html', 'w', encoding='utf-8') as f:
+                    f.write(article.get('html', ''))
+                saved_files.append('article.html')
+                print(f"✅ Saved: article.html")
+                
+                with open('article.txt', 'w', encoding='utf-8') as f:
+                    f.write(article.get('text', ''))
+                saved_files.append('article.txt')
+                print(f"✅ Saved: article.txt")
+                
+                with open('article_meta.json', 'w') as f:
+                    json.dump({
+                        'title': article.get('title'),
+                        'keyword': topic.get('keyword'),
+                        'word_count': results['outputs']['blog']['word_count'],
+                        'generated_at': datetime.now().isoformat()
+                    }, f, indent=2)
+                saved_files.append('article_meta.json')
+                print(f"✅ Saved: article_meta.json")
+            except Exception as e:
+                print(f"❌ Error saving article: {e}")
+        
+        # Save podcast
+        if 'podcast' in results['outputs']:
+            try:
+                if 'audio' in podcast and podcast['audio']:
+                    with open('podcast.mp3', 'wb') as f:
+                        f.write(podcast['audio'])
+                    saved_files.append('podcast.mp3')
+                    print(f"✅ Saved: podcast.mp3")
+                else:
+                    print(f"⚠️  Podcast metadata exists but no audio data")
+            except Exception as e:
+                print(f"❌ Error saving podcast: {e}")
+        
+        # Save translations
+        if 'translations' in results['outputs'] and 'translations' in dir():
+            try:
+                Path('translations').mkdir(exist_ok=True)
+                
+                for lang, content in translations.items():
+                    lang_file = f'translations/article_{lang}.html'
+                    with open(lang_file, 'w', encoding='utf-8') as f:
+                        if isinstance(content, dict):
+                            f.write(content.get('html', content.get('text', '')))
+                        else:
+                            f.write(str(content))
+                    saved_files.append(lang_file)
+                
+                print(f"✅ Saved: {len(translations)} translations")
+            except Exception as e:
+                print(f"❌ Error saving translations: {e}")
+        
+        # Save images
+        if 'images' in results['outputs'] and 'images' in dir() and len(images) > 0:
+            try:
+                Path('images').mkdir(exist_ok=True)
+                
+                for i, img_data in enumerate(images):
+                    img_file = f'images/image_{i}.png'
+                    with open(img_file, 'wb') as f:
+                        f.write(img_data)
+                    saved_files.append(img_file)
+                
+                print(f"✅ Saved: {len(images)} images")
+            except Exception as e:
+                print(f"❌ Error saving images: {e}")
+        else:
+            print(f"⚠️  No images to save (0 variants generated)")
+        
+        # Save SEO summary
+        if 'seo' in results['outputs']:
+            try:
+                with open('seo_pages_summary.json', 'w') as f:
+                    json.dump({
+                        'pages_generated': results['outputs']['seo']['pages_generated'],
+                        'generated_at': datetime.now().isoformat()
+                    }, f, indent=2)
+                saved_files.append('seo_pages_summary.json')
+                print(f"✅ Saved: seo_pages_summary.json")
+            except Exception as e:
+                print(f"❌ Error saving SEO summary: {e}")
+        
+        print(f"\n📦 Total files saved: {len(saved_files)}")
+        print(f"📁 Files ready for artifacts upload")
+        print("="*70 + "\n")
         
         end_time = datetime.now()
         duration = (end_time - results['start_time']).total_seconds()
