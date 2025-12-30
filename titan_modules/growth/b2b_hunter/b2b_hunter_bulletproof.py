@@ -362,17 +362,3 @@ class B2BHunterBulletproof:
             print(f"Send success rate: {send_rate:.1f}%")
         
         print("="*70 + "\n")
-
-
-def analyze_business_style(business: Dict) -> str:
-    """Analyze business style from name"""
-    name = business.get('name', '').lower()
-    
-    if any(word in name for word in ['luxury', 'premium', 'exclusive', 'boutique']):
-        return 'luxury'
-    elif any(word in name for word in ['modern', 'contemporary', 'studio']):
-        return 'modern'
-    elif any(word in name for word in ['traditional', 'classic', 'vintage']):
-        return 'traditional'
-    else:
-        return 'casual'
