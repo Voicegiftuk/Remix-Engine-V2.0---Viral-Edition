@@ -12,14 +12,20 @@ import random
 sys.path.insert(0, str(Path(__file__).parent))
 
 try:
-    from titan_modules.growth.b2b_hunter.b2b_hunter_enhanced import B2BHunter
+    from titan_modules.growth.b2b_hunter.b2b_hunter_bulletproof import B2BHunterBulletproof
+    B2B_BULLETPROOF = True
+    print("B2B Bulletproof Mode Active")
+except ImportError:
+    B2B_BULLETPROOF = False
+    print("B2B Bulletproof not available")
+
+try:
     from titan_modules.psychology.precognition.gift_precognition_enhanced import GiftPrecognition
     from titan_modules.commerce.address_validation import AddressValidator
     GOOGLE_ENHANCED = True
     print("Google Enhanced Mode Active")
 except ImportError:
     try:
-        from titan_modules.growth.b2b_hunter.b2b_hunter import B2BHunter
         from titan_modules.psychology.precognition.gift_precognition_zero_cost import GiftPrecognition
     except:
         pass
@@ -183,12 +189,16 @@ def main():
         print("Enhanced Features: Visual Emails, Perfect Timing, Address Validation")
     else:
         print("Monthly Cost: 0.00 GBP")
+    if B2B_BULLETPROOF:
+        print("B2B: Bulletproof email validation (7 levels)")
     print("="*70 + "\n")
     
     print("Modules Loaded:")
     for module, loaded in modules_loaded.items():
         status = "OK" if loaded else "SKIP"
         print(f"   [{status}] {module}")
+    if B2B_BULLETPROOF:
+        print(f"   [OK] b2b_bulletproof")
     print()
     
     results = {
@@ -348,51 +358,51 @@ def main():
             
             print()
         
-        if GOOGLE_ENHANCED or 'B2BHunter' in dir():
-            print("MODULE 9: B2B HUNTER" + (" ENHANCED" if GOOGLE_ENHANCED else ""))
+        # ================================================================
+        # MODULE #9: B2B HUNTER BULLETPROOF
+        # CRITICAL: NO GUESSING EMAILS - ONLY VALIDATED!
+        # ================================================================
+        if B2B_BULLETPROOF:
+            print("MODULE 9: B2B HUNTER BULLETPROOF")
             print("-" * 70)
             
             try:
-                b2b_engine = B2BHunter()
-                businesses = b2b_engine.find_businesses('London, UK', 'florist')
-                contacted = 0
+                hunter = B2BHunterBulletproof()
                 
-                for business in businesses[:10]:
-                    style = b2b_engine.analyze_business_style(business)
-                    
-                    if GOOGLE_ENHANCED:
-                        email = b2b_engine.generate_cold_email(business, style, include_map=True)
-                        sent = b2b_engine.send_cold_email(
-                            business.get('email', f"contact@{business['name'].lower().replace(' ', '')}.co.uk"),
-                            f"Partnership - {business['name']}",
-                            email,
-                            business=business,
-                            include_map=True
-                        )
-                    else:
-                        email = b2b_engine.generate_cold_email(business, style)
-                        sent = b2b_engine.send_cold_email(
-                            business.get('email', f"contact@{business['name'].lower().replace(' ', '')}.co.uk"),
-                            f"Partnership - {business['name']}",
-                            email
-                        )
-                    
-                    if sent:
-                        contacted += 1
+                stats = hunter.run_campaign(
+                    location='London, UK',
+                    business_type='florist',
+                    max_businesses=30,
+                    max_emails_to_send=5,
+                    dry_run=True  # CHANGE TO False WHEN READY!
+                )
                 
-                results['outputs']['b2b'] = {
-                    'businesses_found': len(businesses),
-                    'emails_sent': contacted,
-                    'enhanced': GOOGLE_ENHANCED
-                }
+                results['outputs']['b2b'] = stats
                 results['modules_run'] += 1
-                print(f"B2B outreach complete")
-                print(f"Emails sent: {contacted}")
-                if GOOGLE_ENHANCED:
-                    print(f"Visual emails with location maps")
+                
+                print(f"\nB2B campaign summary:")
+                print(f"  Businesses found: {stats['businesses_found']}")
+                print(f"  Emails discovered: {stats['emails_discovered']}")
+                print(f"  Emails validated: {stats['emails_validated']}")
+                print(f"  Emails rejected: {stats['emails_rejected']}")
+                print(f"  Emails sent: {stats['emails_sent']}")
+                
+                if stats['emails_discovered'] > 0:
+                    validation_rate = (stats['emails_validated'] / stats['emails_discovered']) * 100
+                    print(f"  Validation rate: {validation_rate:.1f}%")
+                
             except Exception as e:
                 print(f"B2B hunter error: {e}")
+                import traceback
+                traceback.print_exc()
             
+            print()
+        else:
+            print("MODULE 9: B2B HUNTER (DISABLED)")
+            print("-" * 70)
+            print("Bulletproof B2B hunter not available")
+            print("Install required: email_validator_bulletproof.py")
+            print("Install required: b2b_hunter_bulletproof.py")
             print()
         
         if modules_loaded['influencer']:
@@ -443,7 +453,7 @@ def main():
             print()
         
         if GOOGLE_ENHANCED:
-            print("MODULE 14: ADDRESS VALIDATION NEW")
+            print("MODULE 14: ADDRESS VALIDATION")
             print("-" * 70)
             
             try:
@@ -487,6 +497,8 @@ def main():
         else:
             print(f"Mode: Zero-Cost")
             print(f"Cost: 0.00 GBP")
+        if B2B_BULLETPROOF:
+            print(f"B2B: Bulletproof validation active")
         print("="*70)
         
         telegram_message = f"<b>Titan Complete</b>\n\n<b>Modules:</b> {results['modules_run']}\n<b>Duration:</b> {duration:.1f}s"
@@ -504,6 +516,13 @@ def main():
         
         if 'translations' in results['outputs']:
             telegram_message += f"\n<b>Languages:</b> {len(results['outputs']['translations']['languages'])}"
+        
+        if 'b2b' in results['outputs']:
+            b2b = results['outputs']['b2b']
+            telegram_message += f"\n\n<b>B2B Bulletproof:</b>"
+            telegram_message += f"\n  Found: {b2b.get('businesses_found', 0)}"
+            telegram_message += f"\n  Validated: {b2b.get('emails_validated', 0)}"
+            telegram_message += f"\n  Sent: {b2b.get('emails_sent', 0)}"
         
         if GOOGLE_ENHANCED:
             telegram_message += f"\n\n<b>Mode:</b> Google Enhanced"
