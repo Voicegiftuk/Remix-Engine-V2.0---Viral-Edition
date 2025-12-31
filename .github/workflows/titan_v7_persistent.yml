@@ -2,8 +2,8 @@ name: Titan V7 PERSISTENT
 
 on:
   schedule:
-    - cron: '0 10 * * *'  # Codziennie o 10:00 UTC
-  workflow_dispatch:      # Ręczne uruchomienie
+    - cron: '0 10 * * *'
+  workflow_dispatch:
 
 env:
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -24,7 +24,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Potrzebne do commitowania zmian
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
       
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -36,75 +37,81 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
+          echo "✅ System dependencies installed"
       
       - name: Install Python packages
         run: |
           pip install --upgrade pip
           pip install google-generativeai edge-tts jinja2 requests pillow
+          echo "✅ Python packages installed"
+      
+      - name: Verify Python modules
+        run: |
+          python -c "import google.generativeai; print('✅ Gemini OK')"
+          python -c "import edge_tts; print('✅ Edge TTS OK')"
+          python -c "import jinja2; print('✅ Jinja2 OK')"
+          python -c "import requests; print('✅ Requests OK')"
       
       - name: Prepare runtime assets
         run: |
-          echo "📦 Preparing audio and image assets..."
           mkdir -p runtime_assets
+          echo "📁 Runtime assets directory created"
           
-          # Audio files (intro/outro)
           if [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ]; then
             cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/
-            echo "✅ Intro audio copied ($(du -h "assets/music/Just tap.No app intro podkast sayplay.mp3" | cut -f1))"
+            echo "✅ Intro music copied"
           else
-            echo "⚠️ Intro audio not found"
+            echo "⚠️ Intro music not found"
           fi
           
           if [ -f "assets/music/Just tap.no app final podkast.mp3" ]; then
             cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/
-            echo "✅ Outro audio copied ($(du -h "assets/music/Just tap.no app final podkast.mp3" | cut -f1))"
+            echo "✅ Outro music copied"
           else
-            echo "⚠️ Outro audio not found"
+            echo "⚠️ Outro music not found"
           fi
           
-          # Logo
           if [ -f "assets/brand/sayplay_logo.png" ]; then
             cp "assets/brand/sayplay_logo.png" runtime_assets/
             echo "✅ Logo copied"
+          else
+            echo "⚠️ Logo not found"
           fi
           
-          # Mascots
           if [ -f "assets/brand/milo&gigi-razem-z-logo-sayplay.png" ]; then
             cp "assets/brand/milo&gigi-razem-z-logo-sayplay.png" runtime_assets/milo-gigi.png
             echo "✅ Mascots copied"
-          fi
-          
-          echo "📦 Assets prepared"
-      
-      - name: Generate content (TITAN V7 PERSISTENT)
-        run: |
-          echo "🚀 Starting TITAN V7 PERSISTENT..."
-          python titan_master_orchestrator_v7_persistent.py
-          echo "✅ Content generation complete"
-      
-      - name: Commit metadata to repository
-        run: |
-          echo "💾 Committing content history..."
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "GitHub Actions Bot"
-          
-          # Add content history file
-          git add content_history.json
-          
-          # Commit only if there are changes
-          if git diff --quiet && git diff --staged --quiet; then
-            echo "📝 No changes in content_history.json"
           else
-            git commit -m "Update content history [skip ci]"
-            git push
-            echo "✅ Metadata committed and pushed"
+            echo "⚠️ Mascots not found"
+          fi
+          
+          echo ""
+          echo "📊 Runtime assets summary:"
+          ls -lh runtime_assets/ 2>/dev/null || echo "No files copied"
+      
+      - name: Initialize content history
+        run: |
+          if [ ! -f "content_history.json" ]; then
+            echo '{"seo_pages":[],"blog_posts":[],"podcasts":[],"last_episode_number":0,"last_updated":null}' > content_history.json
+            echo "📄 Created new content_history.json"
+          else
+            echo "📖 Existing content_history.json found"
           fi
       
-      - name: Verify generated content
+      - name: Generate content
         run: |
+          echo ""
+          echo "🚀 Starting TITAN V7 PERSISTENT..."
+          echo ""
+          python titan_master_orchestrator_v7_persistent.py
+        continue-on-error: false
+      
+      - name: Verify generated output
+        run: |
+          echo ""
           echo "🔍 Verifying generated content..."
+          echo ""
           
-          # Find latest output directory
           LATEST=$(ls -dt TITAN_OUTPUT_V7_* 2>/dev/null | head -1)
           
           if [ -z "$LATEST" ]; then
@@ -112,177 +119,102 @@ jobs:
             exit 1
           fi
           
-          echo "📁 Checking: $LATEST"
+          echo "📁 Latest output: $LATEST"
           
-          # Count files (excluding index.html files)
           SEO_COUNT=$(find "$LATEST/web/seo" -name '*.html' -not -name 'index.html' 2>/dev/null | wc -l)
           BLOG_COUNT=$(find "$LATEST/web/blog" -name '*.html' -not -name 'index.html' 2>/dev/null | wc -l)
           PODCAST_COUNT=$(find "$LATEST/web/podcasts" -name '*.mp3' 2>/dev/null | wc -l)
           
-          echo "📊 Content generated:"
-          echo "   • SEO pages: $SEO_COUNT"
-          echo "   • Blog posts: $BLOG_COUNT"
-          echo "   • Podcasts: $PODCAST_COUNT"
+          echo "📊 Generated: SEO=$SEO_COUNT Blog=$BLOG_COUNT Podcasts=$PODCAST_COUNT"
           
-          # Verify dashboard files
-          if [ ! -f "$LATEST/web/index.html" ]; then
-            echo "❌ Main dashboard not found!"
-            exit 1
-          fi
-          
-          if [ ! -f "$LATEST/web/seo/index.html" ]; then
-            echo "❌ SEO index not found!"
-            exit 1
-          fi
-          
-          if [ ! -f "$LATEST/web/blog/index.html" ]; then
-            echo "❌ Blog index not found!"
-            exit 1
-          fi
-          
-          if [ ! -f "$LATEST/web/podcasts/index.html" ]; then
-            echo "❌ Podcast index not found!"
-            exit 1
-          fi
-          
-          echo "✅ All dashboards generated"
-          
-          # Require at least 1 of each type
           if [ "$SEO_COUNT" -lt 1 ] || [ "$BLOG_COUNT" -lt 1 ] || [ "$PODCAST_COUNT" -lt 1 ]; then
-            echo "❌ Minimum content not generated!"
-            echo "   Expected: At least 1 SEO, 1 Blog, 1 Podcast"
-            echo "   Got: $SEO_COUNT SEO, $BLOG_COUNT Blog, $PODCAST_COUNT Podcasts"
+            echo "❌ Insufficient content generated"
             exit 1
           fi
           
-          echo "✅ Content verification passed"
-      
-      - name: Prepare deployment package
-        run: |
-          echo "📦 Preparing deployment..."
+          if [ ! -f "$LATEST/web/index.html" ]; then
+            echo "❌ Main dashboard missing"
+            exit 1
+          fi
           
+          echo "✅ All verification checks passed"
+      
+      - name: Commit metadata
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add content_history.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update content history [skip ci]"
+          git push || echo "Nothing to push"
+      
+      - name: Prepare deployment
+        run: |
           LATEST=$(ls -dt TITAN_OUTPUT_V7_* | head -1)
-          
           mkdir -p deploy
-          cp -r "$LATEST/web/"* deploy/
-          
-          echo "📂 Deploy directory contents:"
-          ls -lah deploy/
-          
-          # Verify critical files
-          if [ ! -f "deploy/index.html" ]; then
-            echo "❌ Main index.html missing!"
-            exit 1
-          fi
-          
+          cp -r "$LATEST/web"/* deploy/
           echo "✅ Deployment package ready"
-      
-      - name: Install Vercel CLI
-        run: |
-          npm install --global vercel@latest
-          echo "✅ Vercel CLI installed"
       
       - name: Deploy to Vercel
         run: |
-          echo "🚀 Deploying to Vercel..."
+          npm install --global vercel@latest
           cd deploy
-          
-          # Pull Vercel configuration
           vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-          
-          # Build
           vercel build --prod --token=$VERCEL_TOKEN
-          
-          # Deploy
-          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN)
-          
-          echo "✅ Deployed to: $DEPLOYMENT_URL"
-          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
-      
-      - name: Read metadata stats
-        id: stats
-        run: |
-          LATEST=$(ls -dt TITAN_OUTPUT_V7_* | head -1)
-          
-          if [ -f "$LATEST/web/assets/content_history.json" ]; then
-            STATS=$(python3 << 'EOF'
-import json
-import sys
-from pathlib import Path
-
-latest = "${{ env.LATEST }}"
-if not latest:
-    import subprocess
-    latest = subprocess.check_output(['ls', '-dt', 'TITAN_OUTPUT_V7_*']).decode().split()[0]
-
-history_file = Path(latest) / "web/assets/content_history.json"
-
-if history_file.exists():
-    with open(history_file) as f:
-        data = json.load(f)
-        print(f"{len(data['seo_pages'])},{len(data['blog_posts'])},{len(data['podcasts'])},{data['last_episode_number']}")
-else:
-    print("0,0,0,0")
-EOF
-)
-            echo "STATS=$STATS" >> $GITHUB_ENV
-            echo "✅ Stats extracted: $STATS"
-          else
-            echo "STATS=0,0,0,0" >> $GITHUB_ENV
-            echo "⚠️ No metadata file found"
-          fi
+          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+          echo "✅ Deployed to Vercel"
       
       - name: Success notification
         if: success()
         run: |
-          IFS=',' read -r TOTAL_SEO TOTAL_BLOG TOTAL_PODCAST LATEST_EP <<< "${{ env.STATS }}"
+          LATEST=$(ls -dt TITAN_OUTPUT_V7_* | head -1)
           
-          MESSAGE="✅ TITAN V7 PERSISTENT SUCCESS!%0A%0A"
-          MESSAGE="${MESSAGE}📊 TOTAL CONTENT:%0A"
-          MESSAGE="${MESSAGE}   • SEO Pages: ${TOTAL_SEO}%0A"
-          MESSAGE="${MESSAGE}   • Blog Posts: ${TOTAL_BLOG}%0A"
-          MESSAGE="${MESSAGE}   • Podcasts: ${TOTAL_PODCAST}%0A"
-          MESSAGE="${MESSAGE}   • Latest Episode: #${LATEST_EP}%0A%0A"
-          MESSAGE="${MESSAGE}🔗 dashboard.sayplay.co.uk%0A"
-          MESSAGE="${MESSAGE}🚀 Deployment: ${{ env.DEPLOYMENT_URL }}"
+          NEW_SEO=$(find "$LATEST/web/seo" -name '*.html' -not -name 'index.html' 2>/dev/null | wc -l)
+          NEW_BLOG=$(find "$LATEST/web/blog" -name '*.html' -not -name 'index.html' 2>/dev/null | wc -l)
+          NEW_PODCAST=$(find "$LATEST/web/podcasts" -name '*.mp3' 2>/dev/null | wc -l)
           
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "text=${MESSAGE}" \
-            -d "parse_mode=HTML" || echo "⚠️ Telegram notification failed"
+          python3 -c "
+import json
+try:
+    with open('content_history.json', 'r') as f:
+        data = json.load(f)
+        total_seo = len(data.get('seo_pages', []))
+        total_blog = len(data.get('blog_posts', []))
+        total_podcast = len(data.get('podcasts', []))
+        last_ep = data.get('last_episode_number', 0)
+        print(f'{total_seo},{total_blog},{total_podcast},{last_ep}')
+except:
+    print('0,0,0,0')
+" > stats.txt
+          
+          read TOTAL_SEO TOTAL_BLOG TOTAL_PODCAST LAST_EP < <(cat stats.txt | tr ',' ' ')
+          
+          MESSAGE="✅ TITAN V7 SUCCESS!%0A%0A"
+          MESSAGE="${MESSAGE}🆕 New: ${NEW_SEO} SEO, ${NEW_BLOG} Blog, ${NEW_PODCAST} Podcasts%0A"
+          MESSAGE="${MESSAGE}📊 Total: ${TOTAL_SEO} SEO, ${TOTAL_BLOG} Blog, ${TOTAL_PODCAST} Podcasts%0A"
+          MESSAGE="${MESSAGE}🎙️ Episode: #${LAST_EP}%0A%0A"
+          MESSAGE="${MESSAGE}🔗 dashboard.sayplay.co.uk"
+          
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+            curl -s -X POST \
+              "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -d "chat_id=${TELEGRAM_CHAT_ID}" \
+              -d "text=${MESSAGE}" || true
+          fi
       
       - name: Failure notification
         if: failure()
         run: |
-          MESSAGE="❌ TITAN V7 PERSISTENT FAILED!%0A%0A"
-          MESSAGE="${MESSAGE}⚠️ Check workflow logs:%0A"
-          MESSAGE="${MESSAGE}https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MESSAGE="❌ TITAN V7 FAILED!%0A%0ACheck: github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "text=${MESSAGE}" || echo "⚠️ Telegram notification failed"
-      
-      - name: Cleanup old outputs
-        if: always()
-        run: |
-          echo "🧹 Cleaning old output directories..."
-          
-          # Keep only the 3 most recent output directories
-          OLD_DIRS=$(ls -dt TITAN_OUTPUT_V7_* 2>/dev/null | tail -n +4)
-          
-          if [ -n "$OLD_DIRS" ]; then
-            echo "$OLD_DIRS" | xargs rm -rf
-            echo "✅ Removed old directories"
-          else
-            echo "📁 No old directories to remove"
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+            curl -s -X POST \
+              "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -d "chat_id=${TELEGRAM_CHAT_ID}" \
+              -d "text=${MESSAGE}" || true
           fi
       
-      - name: Upload artifacts (for debugging)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: titan-v7-debug
-          path: |
-            TITAN_OUTPUT_V7_*/
-            content_history.json
-          retention-days: 7
+      - name: Cleanup
+        if: always()
+        run: |
+          ls -dt TITAN_OUTPUT_V7_* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true
+          echo "✅ Cleanup complete"
