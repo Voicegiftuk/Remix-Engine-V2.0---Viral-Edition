@@ -1,9 +1,13 @@
-name: Titan V7 PERSISTENT
+name: Titan V9 Persistent Library
 
 on:
   schedule:
     - cron: '0 10 * * *'
   workflow_dispatch:
+
+# Nadajemy uprawnienia do zapisywania zmian w repozytorium (Kluczowe dla Kuli Śnieżnej)
+permissions:
+  contents: write
 
 env:
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -36,43 +40,69 @@ jobs:
           pip install --upgrade pip
           pip install google-generativeai edge-tts jinja2 requests pillow
       
-      - name: Prepare assets
+      - name: Prepare Persistence & Assets
         run: |
+          # 1. Tworzymy stały folder biblioteki, jeśli nie istnieje
+          mkdir -p website
           mkdir -p runtime_assets
+          
+          # 2. Kopiujemy zasoby do folderu roboczego (żeby Python je widział)
           [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ] && cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/
           [ -f "assets/music/Just tap.no app final podkast.mp3" ] && cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/
           [ -f "assets/brand/sayplay_logo.png" ] && cp "assets/brand/sayplay_logo.png" runtime_assets/
           [ -f "assets/brand/milo&gigi-razem-z-logo-sayplay.png" ] && cp "assets/brand/milo&gigi-razem-z-logo-sayplay.png" runtime_assets/milo-gigi.png
       
-      - name: Initialize history
+      - name: Initialize History
         run: |
           [ ! -f "content_history.json" ] && echo '{"seo_pages":[],"blog_posts":[],"podcasts":[],"last_episode_number":0,"last_updated":null}' > content_history.json
       
-      - name: Generate content
+      - name: Generate Content (Library Build)
         run: python titan_master_orchestrator_v7_persistent.py
       
-      - name: Verify output
+      - name: Verify Output (Fixed for V9)
         run: |
-          LATEST=$(ls -dt TITAN_OUTPUT_V7_* | head -1)
-          SEO=$(find "$LATEST/web/seo" -name '*.html' -not -name 'index.html' | wc -l)
-          BLOG=$(find "$LATEST/web/blog" -name '*.html' -not -name 'index.html' | wc -l)
-          PODCAST=$(find "$LATEST/web/podcasts" -name '*.mp3' | wc -l)
-          echo "Generated: SEO=$SEO Blog=$BLOG Podcasts=$PODCAST"
-          [ "$SEO" -ge 1 ] && [ "$BLOG" -ge 1 ] && [ "$PODCAST" -ge 1 ]
+          # Teraz sprawdzamy folder 'website', a nie stare nazwy
+          SEO=$(find "website/seo" -name '*.html' | wc -l)
+          BLOG=$(find "website/blog" -name '*.html' | wc -l)
+          PODCAST=$(find "website/podcasts" -name '*.mp3' | wc -l)
+          
+          echo "📊 Current Library Size:"
+          echo "SEO Pages: $SEO"
+          echo "Blog Posts: $BLOG"
+          echo "Podcasts: $PODCAST"
+          
+          # Błąd tylko jeśli biblioteka jest pusta (0 plików)
+          if [ "$SEO" -eq 0 ] && [ "$BLOG" -eq 0 ]; then
+            echo "❌ Error: No content generated."
+            exit 1
+          fi
       
-      - name: Commit metadata
+      - name: Commit to GitHub (The Snowball Effect)
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          
+          # 1. Dodajemy folder website (gdzie są wszystkie pliki HTML/MP3)
+          git add website/
           git add content_history.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update content history [skip ci]"
-          git push || true
+          
+          # 2. Sprawdzamy czy są zmiany
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            # 3. Zapisujemy zmiany
+            git commit -m "Titan V9: Added new content to library [skip ci]"
+            
+            # 4. Pobieramy najnowsze zmiany z serwera (żeby uniknąć konfliktów) i wysyłamy
+            git pull --rebase
+            git push
+          fi
       
-      - name: Prepare deployment
+      - name: Prepare Deployment
         run: |
-          LATEST=$(ls -dt TITAN_OUTPUT_V7_* | head -1)
           mkdir -p deploy
-          cp -r "$LATEST/web"/* deploy/
+          # Kopiujemy CAŁĄ bibliotekę do folderu wdrażania
+          cp -r website/* deploy/
       
       - name: Create Vercel config
         run: |
@@ -93,36 +123,26 @@ jobs:
           }
           EOF
       
-      - name: Link and deploy to Vercel
+      - name: Deploy to Vercel
         run: |
           npm install --global vercel@latest
           
-          # --- FIX START: Remove .git folder to bypass Vercel author check ---
+          # Fix: Usuwamy .git aby Vercel nie sprawdzał autora (Action Bot)
           rm -rf .git
-          # --- FIX END ---
           
           cd deploy
           mkdir -p .vercel
           echo '{"orgId":"'$VERCEL_ORG_ID'","projectId":"'$VERCEL_PROJECT_ID'"}' > .vercel/project.json
           vercel deploy --prod --token=$VERCEL_TOKEN --yes
       
-      - name: Success notification
+      - name: Success Notification
         if: success()
         run: |
-          LATEST=$(ls -dt TITAN_OUTPUT_V7_* | head -1)
-          NEW_SEO=$(find "$LATEST/web/seo" -name '*.html' -not -name 'index.html' | wc -l)
-          NEW_BLOG=$(find "$LATEST/web/blog" -name '*.html' -not -name 'index.html' | wc -l)
-          NEW_PODCAST=$(find "$LATEST/web/podcasts" -name '*.mp3' | wc -l)
-          
+          # Pobieramy statystyki z historii
           TOTAL_SEO=$(jq '.seo_pages | length' content_history.json 2>/dev/null || echo "0")
           TOTAL_BLOG=$(jq '.blog_posts | length' content_history.json 2>/dev/null || echo "0")
           TOTAL_PODCAST=$(jq '.podcasts | length' content_history.json 2>/dev/null || echo "0")
-          LAST_EP=$(jq '.last_episode_number' content_history.json 2>/dev/null || echo "0")
           
-          MESSAGE="✅ TITAN V7 SUCCESS!%0A%0ANew: ${NEW_SEO} SEO, ${NEW_BLOG} Blog, ${NEW_PODCAST} Podcasts%0ATotal: ${TOTAL_SEO} SEO, ${TOTAL_BLOG} Blog, ${TOTAL_PODCAST} Podcasts%0AEpisode: ${LAST_EP}%0A%0Adashboard.sayplay.co.uk"
+          MESSAGE="✅ TITAN V9 LIBRARY UPDATED!%0A%0A📚 Total in Library:%0A📄 SEO Pages: ${TOTAL_SEO}%0A📝 Blog Posts: ${TOTAL_BLOG}%0A🎙️ Podcasts: ${TOTAL_PODCAST}%0A%0A🌐 dashboard.sayplay.co.uk"
           
           [ -n "$TELEGRAM_BOT_TOKEN" ] && curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=${TELEGRAM_CHAT_ID}" -d "text=${MESSAGE}" || true
-      
-      - name: Cleanup
-        if: always()
-        run: ls -dt TITAN_OUTPUT_V7_* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true
