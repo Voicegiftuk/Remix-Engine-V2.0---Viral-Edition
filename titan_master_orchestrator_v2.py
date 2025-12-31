@@ -227,7 +227,7 @@ Just pure HTML code ready to save as .html file."""
         
         if GEMINI_AVAILABLE and self.api_key:
             genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
         else:
             self.model = None
     
@@ -569,7 +569,7 @@ def generate_unique_article(topic: dict, api_key: str, validator: ContentUniqueV
     for i in range(max_attempts):
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+            model = genai.GenerativeModel('gemini-1.5-flash')
             seed = hashlib.md5(f"{topic['title']}{datetime.now()}{attempt}{i}".encode()).hexdigest()
             prompt = f"""Write a COMPLETELY UNIQUE article about: {topic['title']}
 
