@@ -147,20 +147,37 @@ jobs:
           npm install --global vercel@latest
           vercel --version
       
-      - name: Deploy to Vercel (Direct)
+      - name: Link Vercel project
         run: |
           cd deploy
           
-          echo "Deploying directly to Vercel..."
+          mkdir -p .vercel
           
-          DEPLOYMENT_URL=$(vercel deploy \
-            --prod \
-            --token=$VERCEL_TOKEN \
-            --scope=$VERCEL_ORG_ID \
-            --yes)
+          cat > .vercel/project.json << EOF
+          {
+            "orgId": "$VERCEL_ORG_ID",
+            "projectId": "$VERCEL_PROJECT_ID"
+          }
+          EOF
           
-          echo "Deployment URL: $DEPLOYMENT_URL"
-          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
+          echo "Vercel project linked"
+      
+      - name: Deploy to Vercel
+        run: |
+          cd deploy
+          
+          echo "Deploying to Vercel..."
+          
+          if [[ "$VERCEL_ORG_ID" == team_* ]]; then
+            echo "Detected: Team Account"
+            DEPLOYMENT_URL=$(vercel deploy --prod --token=$VERCEL_TOKEN --yes 2>&1 | tee deploy.log | tail -1)
+          else
+            echo "Detected: Personal Account"
+            DEPLOYMENT_URL=$(vercel deploy --prod --token=$VERCEL_TOKEN --yes 2>&1 | tee deploy.log | tail -1)
+          fi
+          
+          echo "Deployment completed"
+          echo "URL: $DEPLOYMENT_URL"
       
       - name: Success notification
         if: success()
