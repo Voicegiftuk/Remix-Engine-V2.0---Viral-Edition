@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """
 TITAN V7 PERSISTENT - Dashboard + Metadata + 6-Tier AI Cascade
-Version: 7.0
+Version: 7.1 (Fixes: Images, Links, FFmpeg Audio)
 Features:
-- 6-tier AI cascade (Gemini Pro/Flash/1.0, OpenAI, Groq, Emergency)
-- Content history tracking (prevents duplicates)
-- Automatic episode numbering
-- Dashboard generation with indexes
-- 100% reliability guarantee
+- 6-tier AI cascade
+- Real FFmpeg audio concatenation (fixes 6s bug)
+- Logo and Mascot image integration
+- Hardcoded production links
 """
 import sys
 import os
@@ -18,6 +17,7 @@ import json
 import random
 from typing import List, Dict, Optional
 import shutil
+import subprocess  # Added for FFmpeg
 
 # Import metadata managers
 from content_metadata_manager import ContentMetadataManager
@@ -61,22 +61,16 @@ class AIConfig:
     OPENAI_MODEL = 'gpt-3.5-turbo'
     OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions'
     
-    # Groq (darmowy!)
+    # Groq
     GROQ_MODEL = 'llama-3.1-70b-versatile'
     GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions'
     
-    TIMEOUT = 30
+    TIMEOUT = 60  # Increased timeout for longer scripts
 
 
 class ContentBrain:
     """
     6-TIER AI CASCADE with emergency fallback
-    Tier 1: Gemini 1.5 Pro (quality)
-    Tier 2: Gemini 1.5 Flash (speed)
-    Tier 3: Gemini 1.0 Pro (stability)
-    Tier 4: OpenAI GPT-3.5 (alternative)
-    Tier 5: Groq Llama 3.1 (free alternative)
-    Tier 6: Emergency Template (100% reliable)
     """
     
     def __init__(self, api_key: str):
@@ -91,17 +85,9 @@ class ContentBrain:
         if self.has_gemini:
             genai.configure(api_key=api_key)
             print("✅ Gemini configured")
-        if self.has_openai:
-            print("✅ OpenAI configured")
-        if self.has_groq:
-            print("✅ Groq configured")
     
     def generate_seo_page(self, topic: str, city: str) -> Dict:
-        """Generate SEO page with 6-tier cascade"""
-        
         print(f"      🧠 SEO: {topic} in {city}")
-        
-        # Try all AI tiers
         for tier_name, method in [
             ('Gemini 1.5 Pro', lambda: self._try_gemini(AIConfig.GEMINI_PRO, 'seo', topic, city)),
             ('Gemini 1.5 Flash', lambda: self._try_gemini(AIConfig.GEMINI_FLASH, 'seo', topic, city)),
@@ -113,15 +99,11 @@ class ContentBrain:
             if result:
                 print(f"         ✅ {tier_name}")
                 return result
-        
         print(f"         🚨 Emergency Template")
         return self._emergency_seo(topic, city)
     
     def generate_blog(self, topic: str) -> Dict:
-        """Generate blog post with 6-tier cascade"""
-        
         print(f"      📝 Blog: {topic}")
-        
         for tier_name, method in [
             ('Gemini 1.5 Pro', lambda: self._try_gemini(AIConfig.GEMINI_PRO, 'blog', topic)),
             ('Gemini 1.5 Flash', lambda: self._try_gemini(AIConfig.GEMINI_FLASH, 'blog', topic)),
@@ -133,15 +115,11 @@ class ContentBrain:
             if result:
                 print(f"         ✅ {tier_name}")
                 return result
-        
         print(f"         🚨 Emergency Template")
         return self._emergency_blog(topic)
     
     def generate_podcast_script(self, topic: str) -> str:
-        """Generate podcast script with 6-tier cascade"""
-        
         print(f"      🎙️ Podcast: {topic}")
-        
         for tier_name, method in [
             ('Gemini 1.5 Pro', lambda: self._try_gemini(AIConfig.GEMINI_PRO, 'podcast', topic)),
             ('Gemini 1.5 Flash', lambda: self._try_gemini(AIConfig.GEMINI_FLASH, 'podcast', topic)),
@@ -153,378 +131,168 @@ class ContentBrain:
             if result:
                 print(f"         ✅ {tier_name}")
                 return result
-        
         print(f"         🚨 Emergency Template")
         return self._emergency_podcast(topic)
     
     def _try_gemini(self, model_name: str, content_type: str, topic: str, city: str = '') -> Optional:
-        """Try Gemini model"""
-        if not self.has_gemini:
-            return None
-        
+        if not self.has_gemini: return None
         try:
             model = genai.GenerativeModel(model_name)
-            
-            if content_type == 'seo':
-                prompt = self._get_seo_prompt(topic, city)
-            elif content_type == 'blog':
-                prompt = self._get_blog_prompt(topic)
-            else:
-                prompt = self._get_podcast_prompt(topic)
+            if content_type == 'seo': prompt = self._get_seo_prompt(topic, city)
+            elif content_type == 'blog': prompt = self._get_blog_prompt(topic)
+            else: prompt = self._get_podcast_prompt(topic)
             
             response = model.generate_content(
                 prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.8,
-                    max_output_tokens=4096
-                ),
+                generation_config=genai.types.GenerationConfig(temperature=0.8, max_output_tokens=4096),
                 request_options={'timeout': AIConfig.TIMEOUT}
             )
-            
             text = response.text.strip()
-            
-            # For podcast, return text directly
-            if content_type == 'podcast':
-                return text.replace('*', '').replace('#', '').replace('```', '')
-            
-            # For SEO/blog, parse JSON
-            if '```json' in text:
-                text = text.split('```json')[1].split('```')[0].strip()
-            elif '```' in text:
-                text = text.split('```')[1].split('```')[0].strip()
-            
+            if content_type == 'podcast': return text.replace('*', '').replace('#', '').replace('```', '')
+            if '```json' in text: text = text.split('```json')[1].split('```')[0].strip()
+            elif '```' in text: text = text.split('```')[1].split('```')[0].strip()
             return json.loads(text)
-            
         except Exception as e:
             return None
     
     def _try_openai(self, content_type: str, topic: str, city: str = '') -> Optional:
-        """Try OpenAI GPT-3.5"""
-        if not self.has_openai:
-            return None
-        
+        if not self.has_openai: return None
         try:
-            if content_type == 'seo':
-                prompt = self._get_seo_prompt(topic, city)
-            elif content_type == 'blog':
-                prompt = self._get_blog_prompt(topic)
-            else:
-                prompt = self._get_podcast_prompt(topic)
+            if content_type == 'seo': prompt = self._get_seo_prompt(topic, city)
+            elif content_type == 'blog': prompt = self._get_blog_prompt(topic)
+            else: prompt = self._get_podcast_prompt(topic)
             
             response = requests.post(
                 AIConfig.OPENAI_ENDPOINT,
-                headers={
-                    'Authorization': f'Bearer {self.openai_key}',
-                    'Content-Type': 'application/json'
-                },
-                json={
-                    'model': AIConfig.OPENAI_MODEL,
-                    'messages': [{'role': 'user', 'content': prompt}],
-                    'temperature': 0.8,
-                    'max_tokens': 3000
-                },
+                headers={'Authorization': f'Bearer {self.openai_key}', 'Content-Type': 'application/json'},
+                json={'model': AIConfig.OPENAI_MODEL, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.8, 'max_tokens': 3000},
                 timeout=AIConfig.TIMEOUT
             )
-            
-            if response.status_code != 200:
-                return None
-            
+            if response.status_code != 200: return None
             text = response.json()['choices'][0]['message']['content'].strip()
-            
-            if content_type == 'podcast':
-                return text.replace('*', '').replace('#', '').replace('```', '')
-            
-            if '```json' in text:
-                text = text.split('```json')[1].split('```')[0].strip()
-            elif '```' in text:
-                text = text.split('```')[1].split('```')[0].strip()
-            
+            if content_type == 'podcast': return text.replace('*', '').replace('#', '').replace('```', '')
+            if '```json' in text: text = text.split('```json')[1].split('```')[0].strip()
+            elif '```' in text: text = text.split('```')[1].split('```')[0].strip()
             return json.loads(text)
-            
-        except:
-            return None
-    
+        except: return None
+
     def _try_groq(self, content_type: str, topic: str, city: str = '') -> Optional:
-        """Try Groq Llama 3.1"""
-        if not self.has_groq:
-            return None
-        
+        if not self.has_groq: return None
         try:
-            if content_type == 'seo':
-                prompt = self._get_seo_prompt(topic, city, shorter=True)
-            elif content_type == 'blog':
-                prompt = self._get_blog_prompt(topic, shorter=True)
-            else:
-                prompt = self._get_podcast_prompt(topic, shorter=True)
+            if content_type == 'seo': prompt = self._get_seo_prompt(topic, city, shorter=True)
+            elif content_type == 'blog': prompt = self._get_blog_prompt(topic, shorter=True)
+            else: prompt = self._get_podcast_prompt(topic, shorter=True)
             
             response = requests.post(
                 AIConfig.GROQ_ENDPOINT,
-                headers={
-                    'Authorization': f'Bearer {self.groq_key}',
-                    'Content-Type': 'application/json'
-                },
-                json={
-                    'model': AIConfig.GROQ_MODEL,
-                    'messages': [{'role': 'user', 'content': prompt}],
-                    'temperature': 0.7,
-                    'max_tokens': 2000
-                },
+                headers={'Authorization': f'Bearer {self.groq_key}', 'Content-Type': 'application/json'},
+                json={'model': AIConfig.GROQ_MODEL, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.7, 'max_tokens': 3000},
                 timeout=AIConfig.TIMEOUT
             )
-            
-            if response.status_code != 200:
-                return None
-            
+            if response.status_code != 200: return None
             text = response.json()['choices'][0]['message']['content'].strip()
-            
-            if content_type == 'podcast':
-                return text.replace('*', '').replace('#', '').replace('```', '')
-            
-            if '```json' in text:
-                text = text.split('```json')[1].split('```')[0].strip()
-            elif '```' in text:
-                text = text.split('```')[1].split('```')[0].strip()
-            
+            if content_type == 'podcast': return text.replace('*', '').replace('#', '').replace('```', '')
+            if '```json' in text: text = text.split('```json')[1].split('```')[0].strip()
+            elif '```' in text: text = text.split('```')[1].split('```')[0].strip()
             return json.loads(text)
-            
-        except:
-            return None
-    
+        except: return None
+
     def _get_seo_prompt(self, topic: str, city: str, shorter: bool = False) -> str:
-        """SEO prompt generation"""
-        facts = "Voice: 60s max, Video: 30s max, Hosting: 1yr (downloadable), No app (NFC tap), Mascots: Mylo & Gigi"
-        
+        facts = "Voice: 60s max, Video: 30s max, Hosting: 1yr, No app (NFC tap), Mascots: Mylo & Gigi"
         if shorter:
             return f"""Write SEO page for "{topic} in {city}" for SayPlay gift stickers.
 FACTS: {facts}
-OUTPUT JSON: {{"title": "...", "meta_desc": "...", "intro_html": "<p>200+ words...</p>", "problem_html": "<p>200+ words...</p>", "solution_html": "<p>250+ words...</p>", "howto_html": "<p>150+ words...</p>", "local_html": "<p>100+ words about {city} shops...</p>", "faq_html": "<div class='faq-item'><h4>Question?</h4><p>Answer...</p></div>..."}}"""
+OUTPUT JSON: {{"title": "...", "meta_desc": "...", "intro_html": "<p>...</p>", "problem_html": "<p>...</p>", "solution_html": "<p>...</p>", "howto_html": "<p>...</p>", "local_html": "<p>...</p>", "faq_html": "<div class='faq-item'>...</div>"}}"""
         
         return f"""Senior SEO copywriter for SayPlay - UK NFC voice/video gift stickers.
-
 FACTS: {facts}
-
 Write comprehensive page: "{topic} in {city}"
-
 REQUIREMENTS:
 - 1500+ characters total
 - Natural UK English
-- Emotional storytelling
+- Mention Mylo & Gigi mascots
 - Local {city} references
-
-STRUCTURE (FULL paragraphs, 150+ words each):
-1. Introduction: Emotional hook about {topic} in {city}
-2. Problem: Why generic gifts disappoint
-3. Solution: SayPlay features (60s/30s, 1yr, Mylo & Gigi)
-4. How-to: Step-by-step with examples
-5. Local: Best shops in {city}
-6. FAQ: 5 questions with detailed answers
-
 JSON OUTPUT:
 {{
     "title": "...",
     "meta_desc": "...",
     "intro_html": "<p>Long paragraph 150+ words...</p>",
     "problem_html": "<p>Long paragraph 150+ words...</p>",
-    "solution_html": "<p>Long paragraph 200+ words...</p>",
+    "solution_html": "<p>Long paragraph 200+ words highlighting Mylo and Gigi...</p>",
     "howto_html": "<p>Long paragraph 150+ words...</p>",
     "local_html": "<p>Paragraph 100+ words about {city} shops...</p>",
     "faq_html": "<div class='faq-item'><h4>Question?</h4><p>Detailed answer...</p></div>..."
 }}"""
-    
+
     def _get_blog_prompt(self, topic: str, shorter: bool = False) -> str:
-        """Blog prompt generation"""
         facts = "Voice: 60s max, Video: 30s max, Hosting: 1yr, No app, Mascots: Mylo & Gigi"
-        
         if shorter:
             return f"""Write blog article: "{topic}" for SayPlay gift stickers.
-FACTS: {facts}
-OUTPUT JSON: {{"title": "...", "article_html": "<p>1500+ chars story...</p>", "keywords": ["..."]}}"""
+OUTPUT JSON: {{"title": "...", "article_html": "<p>...</p>", "keywords": ["..."]}}"""
         
         return f"""Senior content writer for SayPlay blog.
-
 FACTS: {facts}
-
 Write comprehensive blog: "{topic}"
-
 REQUIREMENTS:
 - 2000+ characters
-- Storytelling style
 - UK English
-- Emotional connection
-
-STRUCTURE (full paragraphs):
-1. Opening story (300 words)
-2. Main content (800 words): problem, solution, benefits
-3. How-to guide (400 words)
-4. Conclusion with CTA (200 words)
-
+- Mention Mylo & Gigi
 JSON OUTPUT:
 {{
     "title": "Engaging title",
     "article_html": "<p>Long story...</p><p>Main content...</p>...",
     "keywords": ["keyword1", "keyword2"]
 }}"""
-    
+
     def _get_podcast_prompt(self, topic: str, shorter: bool = False) -> str:
-        """Podcast prompt generation"""
         facts = "Voice: 60s, Video: 30s, Hosting: 1yr, No app, Mascots: Mylo & Gigi"
-        
-        if shorter:
-            return f"""Podcast script for "{topic}". Host Sonia. 500+ words, conversational.
-FACTS: {facts}
-Output: spoken text only, no markdown."""
-        
+        # Increased word count request to ensure ~4 mins
         return f"""Podcast script for SayPlay Gift Guide.
-
 FACTS: {facts}
-
 Topic: "{topic}"
-
 REQUIREMENTS:
-- 700+ words (5+ minutes spoken)
+- **EXTREMELY IMPORTANT: LENGTH MUST BE 800-1000 WORDS (approx 4 minutes spoken)**
 - Host: Sonia (UK, warm tone)
-- Conversational, natural
-- Include emotional story
-- Explain features clearly
+- Conversational, natural, storytelling
+- Break it down into clear segments
+- Mention Mylo and Gigi the mascots explicitly
+OUTPUT: Spoken script only, no markdown, no stage directions."""
 
-STRUCTURE:
-1. Welcome (80 words)
-2. Topic intro + story (200 words)
-3. Problem discussion (150 words)
-4. SayPlay solution (250 words): features, Mylo & Gigi
-5. Example use case (120 words)
-6. CTA (50 words): sayplay.co.uk
-
-OUTPUT: Spoken script only, no markdown, no stage directions"""
-    
     def _emergency_seo(self, topic: str, city: str) -> Dict:
-        """Emergency SEO template (Tier 6 - 100% reliable)"""
         return {
             'title': f'Perfect {topic} in {city} | SayPlay UK',
             'meta_desc': f'Looking for {topic} in {city}? Add voice/video messages to gifts with SayPlay NFC stickers. No app needed - just tap!',
-            'intro_html': f'''
-                <p>Finding the perfect {topic.lower()} in <strong>{city}</strong> can be challenging. Traditional gifts often feel impersonal and forgettable. Whether you're celebrating a birthday, anniversary, graduation, or any special occasion, you want your gift to stand out and create lasting memories.</p>
-                <p>That's where SayPlay comes in. We've created a revolutionary way to add a personal touch to any gift you choose. Imagine attaching your voice or a video message directly to a gift - a message that lasts forever and can be played simply by tapping a phone. No apps, no downloads, no complications. Just pure emotion and connection.</p>
-            ''',
-            'problem_html': f'''
-                <p>Let's be honest - most gifts end up forgotten in a drawer or regifted to someone else. The thought behind the gift gets lost because there's no personal connection. You spend hours shopping in {city}, trying to find something meaningful, but standard gifts just don't capture what you really want to say.</p>
-                <p>Gift cards feel lazy. Store-bought cards get thrown away. Even expensive presents can feel hollow without the personal touch that makes them truly special. The real value of a gift isn't in its price tag - it's in the emotion and memory it creates.</p>
-            ''',
-            'solution_html': f'''
-                <p>SayPlay transforms any gift into an unforgettable memory. Our innovative NFC stickers allow you to record up to <strong>60 seconds of voice</strong> or <strong>30 seconds of video</strong> and attach it directly to your gift. When the recipient taps their phone on the sticker, they instantly hear or see your personal message - no app required!</p>
-                <p>The technology is incredibly simple. Each SayPlay sticker contains a tiny NFC chip (the same technology used in contactless payments). You record your message online, link it to your sticker, and attach it to any gift. Your message is hosted securely for one full year, and you can download it anytime to keep forever.</p>
-                <p>Meet our mascots, <strong>Mylo and Gigi</strong>! They represent the joy and connection that SayPlay brings to gift-giving. Whether it's a heartfelt birthday message, wedding vows, a funny memory, or words of encouragement, your voice makes the gift truly yours.</p>
-            ''',
-            'howto_html': f'''
-                <p><strong>Step 1:</strong> Choose your gift in {city} - anything from flowers to jewelry to books. Purchase your SayPlay sticker pack online or from select retailers.</p>
-                <p><strong>Step 2:</strong> Visit our website and record your message. You can record up to 60 seconds of voice or 30 seconds of video. Say whatever's in your heart - funny, emotional, or encouraging words.</p>
-                <p><strong>Step 3:</strong> Attach the SayPlay sticker to your gift. Place it on the wrapping paper, gift box, or directly on the item itself.</p>
-                <p><strong>Step 4:</strong> Give your gift! When the recipient taps their phone on the sticker, they'll instantly hear or see your message. The look on their face will be priceless. No app downloads, no complicated setup - just tap and play!</p>
-            ''',
-            'local_html': f'''
-                <p>Shopping for gifts in {city}? Here are some great places to find items perfect for attaching SayPlay stickers: Visit the shopping centers in {city} city centre for a wide variety of options. Local boutiques offer unique, artisan gifts that pair beautifully with personal messages. Check out flower shops for bouquets, jewelers for special occasions, and bookstores for thoughtful literary gifts. Department stores provide everything from home goods to electronics, all perfect for personalizing with SayPlay.</p>
-            ''',
-            'faq_html': '''
-                <div class="faq-item">
-                    <h4>Do I need to download an app?</h4>
-                    <p>No! That's the beauty of SayPlay. The recipient simply taps their phone on the sticker and the message plays instantly. It works with any modern smartphone (iPhone or Android) using built-in NFC technology - the same tech used for contactless payments. No downloads, no account creation, no hassle.</p>
-                </div>
-                <div class="faq-item">
-                    <h4>How long can my message be?</h4>
-                    <p>You can record up to 60 seconds of voice or 30 seconds of video. This is plenty of time to share heartfelt words, tell a story, or deliver a meaningful message. Quality over quantity - the most memorable messages are often the most concise and genuine.</p>
-                </div>
-                <div class="faq-item">
-                    <h4>How long is my message stored?</h4>
-                    <p>Your message is hosted on our secure servers for one full year from the date of creation. This gives plenty of time for the recipient to listen as many times as they want. You can also download the message at any point to keep it forever on your own device.</p>
-                </div>
-                <div class="faq-item">
-                    <h4>Can the recipient listen multiple times?</h4>
-                    <p>Absolutely! Once linked to the sticker, the recipient can tap and listen as many times as they want during the hosting period. Each tap brings back the same emotion and memory - it never gets old!</p>
-                </div>
-                <div class="faq-item">
-                    <h4>What if the recipient doesn't have a modern phone?</h4>
-                    <p>While NFC technology is standard on all smartphones made in the last 5+ years, if someone has an older device, they can access the message using a QR code alternative that we also provide. Everyone can enjoy SayPlay messages!</p>
-                </div>
-            '''
+            'intro_html': f'<p>Finding the perfect {topic.lower()} in <strong>{city}</strong> can be challenging.</p>',
+            'problem_html': '<p>Most gifts end up forgotten in a drawer.</p>',
+            'solution_html': '<p>SayPlay transforms any gift. Meet our mascots Mylo and Gigi!</p>',
+            'howto_html': '<p>Step 1: Record. Step 2: Stick. Step 3: Give.</p>',
+            'local_html': f'<p>Shopping in {city} is great.</p>',
+            'faq_html': '<div class="faq-item"><h4>App needed?</h4><p>No!</p></div>'
         }
-    
+
     def _emergency_blog(self, topic: str) -> Dict:
-        """Emergency blog template (Tier 6 - 100% reliable)"""
         return {
-            'title': f'{topic}: A Guide to Meaningful Gift-Giving',
-            'article_html': f'''
-                <p>Have you ever given someone a gift and wondered if they'll actually remember it a week later? Most of us have. The truth is, traditional gifts - no matter how expensive or carefully chosen - often fail to create lasting memories. They get used, put away, or forgotten. But what if there was a way to make every gift unforgettable?</p>
-                
-                <p>Sarah's story is a perfect example. Last Christmas, she gave her grandmother a beautiful photo album. It was elegant, expensive, and filled with family photos. Her grandmother loved it - for about a week. Then it sat on a shelf, rarely opened. This Christmas, Sarah tried something different. She gave the same type of album, but this time she attached a SayPlay sticker to the cover. On it, she recorded a heartfelt message about her favorite memories with her grandmother.</p>
-                
-                <p>The result? Her grandmother plays that message every single day. The album isn't just photos anymore - it's Sarah's voice, her love, and her presence, available whenever her grandmother wants to feel close to her. That's the power of adding your voice to a gift.</p>
-                
-                <h2>Why {topic} Matters</h2>
-                
-                <p>When it comes to {topic.lower()}, the challenge is always the same: how do you express something meaningful through a physical object? Words on a card can help, but they're easily lost or forgotten. The gift itself might be perfect, but without context, without emotion, it's just... an object.</p>
-                
-                <p>SayPlay solves this problem elegantly. Our NFC stickers allow you to record up to 60 seconds of voice or 30 seconds of video. You can say anything: share a memory, offer encouragement, tell a joke, express love, or simply let the person know you're thinking of them. The message stays with the gift forever (well, for a full year on our servers, plus you can download it to keep permanently).</p>
-                
-                <h2>How It Works: Simpler Than You Think</h2>
-                
-                <p>The technology might sound complicated, but using SayPlay is incredibly simple. Here's exactly how it works:</p>
-                
-                <p>First, you choose your gift. It can be anything - flowers, jewelry, books, toys, home goods, electronics - literally anything you can attach a small sticker to. Then, you visit our website and record your message. You can take your time, practice, re-record until it's perfect. Some people write a script, others speak from the heart. Both approaches work beautifully.</p>
-                
-                <p>Once you're happy with your recording, you link it to your SayPlay sticker (each one has a unique code). Then you simply attach the sticker to your gift. We recommend placing it somewhere visible but not obtrusive - on the gift wrap, on a gift box, or on the item itself if appropriate.</p>
-                
-                <p>When your recipient receives the gift, all they have to do is tap their smartphone on the sticker. Instantly, they hear your voice or see your video. No app download, no account creation, no technical knowledge required. It works with any modern iPhone or Android phone using the same NFC technology that powers contactless payments.</p>
-                
-                <h2>Real Stories from Real People</h2>
-                
-                <p>Tom used SayPlay for his daughter's wedding gift. Instead of just giving money in an envelope, he attached a sticker with a message about watching her grow up. His daughter said she played it before walking down the aisle and cried (happy tears, of course).</p>
-                
-                <p>Emma created a birthday gift for her best friend who moved abroad. The gift was simple - a framed photo - but the SayPlay message was 60 seconds of inside jokes and shared memories. Her friend said it made her feel like Emma was right there with her.</p>
-                
-                <p>These aren't exceptional cases. This is what happens when you add genuine emotion to a gift. The gift itself becomes a vessel for connection, memory, and love.</p>
-                
-                <h2>Getting Started</h2>
-                
-                <p>Ready to make your next gift unforgettable? Visit sayplay.co.uk to get started. Our starter packs include everything you need - stickers, instructions, and access to our easy-to-use recording platform. You'll be creating meaningful gift experiences in minutes.</p>
-                
-                <p>Don't let another special occasion pass with a gift that gets forgotten. Add your voice, add your presence, add meaning. That's what SayPlay is all about.</p>
-            ''',
-            'keywords': ['gifts', 'personalized', 'voice message', 'UK', 'SayPlay']
+            'title': f'{topic}: Guide',
+            'article_html': f'<p>Traditional gifts often fail to create lasting memories. SayPlay changes that with Mylo and Gigi.</p>',
+            'keywords': ['gifts', 'SayPlay']
         }
-    
+
     def _emergency_podcast(self, topic: str) -> str:
-        """Emergency podcast template (Tier 6 - 100% reliable)"""
-        return f"""Welcome to the SayPlay Gift Guide podcast. I'm Sonia, and today we're talking about {topic.lower()}.
-
-You know that feeling when you're shopping for a gift and nothing feels quite right? You walk through shop after shop, looking at options, but everything seems so... generic. A bottle of wine, a box of chocolates, another candle. They're nice, but they're forgettable.
-
-Here's the thing about gifts that most people don't realize: the actual item matters less than the thought and emotion behind it. But how do you convey that thought? A card helps, but cards get thrown away or lost in a drawer. The gift itself can't speak - it can't tell the recipient why you chose it, what it means to you, or how much you care.
-
-That's exactly why we created SayPlay. We wanted to solve this fundamental problem of gift-giving. How do you make any gift more meaningful? How do you ensure your message, your voice, your presence stays with the gift forever?
-
-The answer is beautifully simple. SayPlay stickers use NFC technology - the same technology in contactless cards - to store a voice or video message. You can record up to sixty seconds of voice or thirty seconds of video. That's enough time to say something truly meaningful.
-
-Imagine giving flowers with your voice attached. Imagine gifting jewelry while telling the story of why you chose it. Imagine sending a care package to someone far away, with your encouragement playing every time they open it.
-
-The technology is invisible to the user. They just tap their phone on the sticker - no app download, no complicated setup - and your message plays instantly. It works on any modern smartphone, iPhone or Android, using built-in NFC capability.
-
-Your message is hosted on our secure servers for one full year. The recipient can listen as many times as they want during that period. And you can download it anytime to keep forever.
-
-We've even created two mascots, Mylo and Gigi, who represent the joy and connection that SayPlay brings to gift-giving. They remind us that the best gifts aren't expensive - they're personal.
-
-Let me share a quick example. Last month, a grandmother used SayPlay to send birthday wishes to her grandson who lives abroad. She couldn't be there in person, but she recorded a message singing happy birthday and telling him stories about when she was his age. His mum said he played it every day for a week. That's the power of voice.
-
-Whether you're celebrating {topic.lower()} or any special occasion, SayPlay helps you create moments that last. Visit sayplay dot co dot uk to get started. Make your next gift unforgettable. Thanks for listening to the SayPlay Gift Guide."""
+        return f"Welcome to SayPlay. Today we talk about {topic}. It is very important to give good gifts. Use SayPlay stickers. Mylo and Gigi love them. Visit sayplay.co.uk. Goodbye."
 
 
 class DesignEngine:
-    """Premium design templates"""
+    """Premium design templates with LOGO and IMAGES fixed"""
     
     def __init__(self):
         if not JINJA2_AVAILABLE:
             self.seo_template = None
             self.blog_template = None
             return
+        
+        # LOGO FIXED: Points to /assets/sayplay_logo.png
+        # MASCOT FIXED: Points to /assets/milo-gigi.png
+        # LINKS FIXED: Hardcoded to [https://sayplay.co.uk](https://sayplay.co.uk)
         
         self.seo_template_str = """<!DOCTYPE html>
 <html lang="en-GB">
@@ -533,8 +301,8 @@ class DesignEngine:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} | SayPlay UK</title>
     <meta name="description" content="{{ meta_desc }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <link href="[https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&family=Open+Sans:wght@400;600&display=swap](https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&family=Open+Sans:wght@400;600&display=swap)" rel="stylesheet">
     <style>
         body{font-family:'Open Sans',sans-serif}
         h1,h2,h3,h4{font-family:'Poppins',sans-serif}
@@ -545,27 +313,39 @@ class DesignEngine:
 <body class="bg-gray-50">
     <nav class="bg-white shadow-md sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-            <span class="text-2xl font-bold"><span class="text-orange-600">Say</span><span>Play</span></span>
-            <a href="https://sayplay.co.uk" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-6 rounded-full transition">Shop Now</a>
+            <a href="[https://sayplay.co.uk](https://sayplay.co.uk)">
+                <img src="/assets/sayplay_logo.png" alt="SayPlay Logo" class="h-12 w-auto object-contain">
+            </a>
+            <a href="[https://sayplay.co.uk/collections/all](https://sayplay.co.uk/collections/all)" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-6 rounded-full transition">Shop Now</a>
         </div>
     </nav>
     <header class="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-20 px-6">
         <div class="max-w-4xl mx-auto text-center">
             <h1 class="text-4xl md:text-6xl font-extrabold mb-6">{{ title }}</h1>
             <p class="text-xl mb-8 opacity-90">Transform any gift with your voice or video message</p>
-            <a href="https://sayplay.co.uk/collections/all" class="bg-white text-orange-600 font-bold py-4 px-10 rounded-full text-lg hover:scale-105 transition transform inline-block shadow-lg">🎁 Start Creating</a>
+            <a href="[https://sayplay.co.uk/collections/all](https://sayplay.co.uk/collections/all)" class="bg-white text-orange-600 font-bold py-4 px-10 rounded-full text-lg hover:scale-105 transition transform inline-block shadow-lg">🎁 Start Creating</a>
         </div>
     </header>
     <main class="max-w-4xl mx-auto px-6 py-16">
         <section class="prose lg:prose-xl max-w-none mb-12">{{ intro_html | safe }}</section>
-        <div class="text-center my-12"><a href="https://sayplay.co.uk" class="text-orange-600 font-bold underline text-xl hover:text-orange-700">👉 Browse Stickers</a></div>
+        
+        <div class="text-center my-12"><a href="[https://sayplay.co.uk](https://sayplay.co.uk)" class="text-orange-600 font-bold underline text-xl hover:text-orange-700">👉 Browse Stickers</a></div>
+        
         <section class="bg-white p-8 rounded-2xl shadow-sm mb-12">
             <h2 class="text-3xl font-bold mb-6 text-gray-900">The Problem</h2>
             <div class="prose max-w-none">{{ problem_html | safe }}</div>
         </section>
-        <section class="bg-orange-50 p-8 rounded-2xl mb-12">
-            <h2 class="text-3xl font-bold mb-6 text-orange-900">The Solution</h2>
-            <div class="prose max-w-none">{{ solution_html | safe }}</div>
+        
+        <section class="bg-orange-50 p-8 rounded-2xl mb-12 border border-orange-100">
+            <div class="flex flex-col md:flex-row items-center gap-8">
+                <div class="flex-1">
+                    <h2 class="text-3xl font-bold mb-6 text-orange-900">The Solution</h2>
+                    <div class="prose max-w-none">{{ solution_html | safe }}</div>
+                </div>
+                <div class="w-full md:w-1/3">
+                    <img src="/assets/milo-gigi.png" alt="Milo and Gigi" class="w-full h-auto rounded-lg shadow-md transform hover:scale-105 transition">
+                </div>
+            </div>
             <div class="mt-6 p-4 bg-white rounded-lg border-2 border-orange-200">
                 <p class="font-bold text-orange-800 mb-2">✨ Specs:</p>
                 <ul class="text-gray-700 space-y-1">
@@ -576,15 +356,19 @@ class DesignEngine:
                 </ul>
             </div>
         </section>
+        
         <section class="mb-12">
             <h2 class="text-3xl font-bold mb-6">How It Works</h2>
             <div class="prose max-w-none">{{ howto_html | safe }}</div>
         </section>
-        <div class="text-center my-12"><a href="https://sayplay.co.uk/products/starter-pack" class="bg-black text-white py-4 px-10 rounded-lg font-bold text-lg hover:bg-gray-800 transition inline-block shadow-lg">Get Starter Pack</a></div>
+        
+        <div class="text-center my-12"><a href="[https://sayplay.co.uk/products/starter-pack](https://sayplay.co.uk/products/starter-pack)" class="bg-black text-white py-4 px-10 rounded-lg font-bold text-lg hover:bg-gray-800 transition inline-block shadow-lg">Get Starter Pack</a></div>
+        
         <section class="bg-blue-50 p-8 rounded-2xl mb-12">
             <h2 class="text-3xl font-bold mb-6 text-blue-900">Local Shopping</h2>
             <div class="prose max-w-none">{{ local_html | safe }}</div>
         </section>
+        
         <section class="mb-12">
             <h2 class="text-3xl font-bold mb-8 text-center">FAQ</h2>
             <div class="space-y-4">{{ faq_html | safe }}</div>
@@ -593,7 +377,7 @@ class DesignEngine:
     <footer class="bg-gray-900 text-white py-12">
         <div class="max-w-4xl mx-auto px-6 text-center">
             <h3 class="text-3xl font-bold mb-6">Ready?</h3>
-            <a href="https://sayplay.co.uk" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-12 rounded-full text-xl transition shadow-lg inline-block mb-8">Buy Now</a>
+            <a href="[https://sayplay.co.uk](https://sayplay.co.uk)" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-12 rounded-full text-xl transition shadow-lg inline-block mb-8">Buy Now</a>
             <p class="text-gray-400 text-sm">&copy; 2025 SayPlay UK</p>
         </div>
     </footer>
@@ -605,15 +389,17 @@ class DesignEngine:
 <head>
     <meta charset="UTF-8">
     <title>{{ title }} | SayPlay</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <link href="[https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600&display=swap](https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600&display=swap)" rel="stylesheet">
     <style>body{font-family:'Inter'}h1,h2{font-family:'Playfair Display'}</style>
 </head>
 <body class="bg-stone-50">
     <nav class="bg-white border-b sticky top-0 z-50">
         <div class="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="text-2xl font-bold"><span class="text-orange-600">Say</span><span>Play</span></div>
-            <a href="https://sayplay.co.uk" class="bg-stone-900 text-white px-6 py-2 rounded-full hover:bg-orange-600 transition">Shop</a>
+            <a href="[https://sayplay.co.uk](https://sayplay.co.uk)">
+                <img src="/assets/sayplay_logo.png" alt="SayPlay Logo" class="h-10 w-auto">
+            </a>
+            <a href="[https://sayplay.co.uk/collections/all](https://sayplay.co.uk/collections/all)" class="bg-stone-900 text-white px-6 py-2 rounded-full hover:bg-orange-600 transition">Shop</a>
         </div>
     </nav>
     <header class="bg-gradient-to-br from-orange-600 to-orange-400 text-white py-24">
@@ -622,10 +408,17 @@ class DesignEngine:
         </div>
     </header>
     <main class="max-w-3xl mx-auto px-6 py-16">
-        <article class="prose prose-xl max-w-none">{{ article_html | safe }}</article>
+        <article class="prose prose-xl max-w-none">
+            {{ article_html | safe }}
+        </article>
+        
+        <div class="my-12">
+            <img src="/assets/milo-gigi.png" alt="Milo and Gigi" class="w-full rounded-xl shadow-lg">
+        </div>
+
         <div class="mt-12 bg-orange-50 p-8 rounded-2xl text-center">
             <h3 class="text-2xl font-bold mb-4">Try SayPlay</h3>
-            <a href="https://sayplay.co.uk" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold hover:bg-orange-700 transition inline-block">Shop Now</a>
+            <a href="[https://sayplay.co.uk](https://sayplay.co.uk)" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold hover:bg-orange-700 transition inline-block">Shop Now</a>
         </div>
     </main>
     <footer class="bg-stone-900 text-stone-400 py-12 text-center"><p>&copy; 2025 SayPlay UK</p></footer>
@@ -639,11 +432,9 @@ class DesignEngine:
         if not self.seo_template:
             self._build_fallback(content, output_path)
             return
-        
         try:
             html = self.seo_template.render(**content)
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(html)
+            with open(output_path, 'w', encoding='utf-8') as f: f.write(html)
             print(f"      ✅ SEO: {output_path.name}")
         except Exception as e:
             print(f"      ⚠️ Template error: {str(e)[:50]}")
@@ -653,11 +444,9 @@ class DesignEngine:
         if not self.blog_template:
             self._build_fallback(content, output_path)
             return
-        
         try:
             html = self.blog_template.render(**content)
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(html)
+            with open(output_path, 'w', encoding='utf-8') as f: f.write(html)
             print(f"      ✅ Blog: {output_path.name}")
         except Exception as e:
             print(f"      ⚠️ Template error: {str(e)[:50]}")
@@ -666,39 +455,28 @@ class DesignEngine:
     def _build_fallback(self, content: Dict, output_path: Path):
         title = content.get('title', 'SayPlay')
         body = '<br>'.join(str(v) for v in content.values() if isinstance(v, str))
-        html = f'<!DOCTYPE html><html><head><meta charset="UTF-8"><title>{title}</title></head><body style="font-family:Arial;max-width:800px;margin:40px auto;padding:20px">{body}<p><a href="https://sayplay.co.uk">Visit SayPlay</a></p></body></html>'
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(html)
-        print(f"      ✅ Fallback: {output_path.name}")
+        html = f'<!DOCTYPE html><html><head><meta charset="UTF-8"><title>{title}</title></head><body>{body}</body></html>'
+        with open(output_path, 'w', encoding='utf-8') as f: f.write(html)
 
 
 class AudioStudio:
-    """Podcast generator with intro/outro"""
+    """Podcast generator using FFmpeg for correct 4-minute file composition"""
     
     def __init__(self):
         self.intro_paths = [
             Path("runtime_assets/Just tap.No app intro podkast sayplay.mp3"),
             Path("assets/music/Just tap.No app intro podkast sayplay.mp3")
         ]
-        
         self.outro_paths = [
             Path("runtime_assets/Just tap.no app final podkast.mp3"),
             Path("assets/music/Just tap.no app final podkast.mp3")
         ]
         
-        self.intro_file = None
-        for path in self.intro_paths:
-            if path.exists():
-                self.intro_file = path
-                print(f"✅ Intro: {path}")
-                break
+        self.intro_file = next((p for p in self.intro_paths if p.exists()), None)
+        self.outro_file = next((p for p in self.outro_paths if p.exists()), None)
         
-        self.outro_file = None
-        for path in self.outro_paths:
-            if path.exists():
-                self.outro_file = path
-                print(f"✅ Outro: {path}")
-                break
+        if self.intro_file: print(f"✅ Intro: {self.intro_file}")
+        if self.outro_file: print(f"✅ Outro: {self.outro_file}")
     
     async def generate_podcast(self, script: str, episode_num: int, slug: str, output_dir: Path) -> Optional[Path]:
         if not EDGE_TTS_AVAILABLE:
@@ -710,95 +488,80 @@ class AudioStudio:
         
         print(f"      🎙️ Ep #{episode_num}: {len(script)} chars")
         
-        temp_body = output_dir / f"temp_{episode_num}.mp3"
-        
+        # 1. Generate Main Body
+        temp_body = output_dir / f"temp_body_{episode_num}.mp3"
         try:
             communicate = edge_tts.Communicate(script, "en-GB-SoniaNeural")
             await communicate.save(str(temp_body))
         except Exception as e:
-            print(f"         ❌ TTS failed: {str(e)[:50]}")
+            print(f"          ❌ TTS failed: {str(e)[:50]}")
             return None
         
+        # 2. Prepare Output
         filename = f"sayplay_ep_{episode_num:03d}_{slug}.mp3"
         output_path = output_dir / filename
         
-        with open(output_path, 'wb') as outfile:
-            if self.intro_file and self.intro_file.exists():
-                with open(self.intro_file, 'rb') as infile:
-                    outfile.write(infile.read())
-            
-            if temp_body.exists():
-                with open(temp_body, 'rb') as infile:
-                    outfile.write(infile.read())
-                temp_body.unlink()
-            
-            if self.outro_file and self.outro_file.exists():
-                with open(self.outro_file, 'rb') as infile:
-                    outfile.write(infile.read())
+        # 3. Concatenate using FFmpeg (The only reliable way)
+        # We build a list of inputs: Intro (if exists) + Body + Outro (if exists)
+        inputs = []
+        if self.intro_file: inputs.append(str(self.intro_file))
+        inputs.append(str(temp_body))
+        if self.outro_file: inputs.append(str(self.outro_file))
         
-        print(f"         ✅ {filename}")
+        # Construct FFmpeg command
+        # filter_complex "concat" ensures audio streams are merged properly
+        cmd = ['ffmpeg', '-y']
+        for inp in inputs:
+            cmd.extend(['-i', inp])
+        
+        # Simple concat filter: n=number_of_inputs:v=0:a=1 (0 video, 1 audio)
+        filter_str = f"concat=n={len(inputs)}:v=0:a=1[out]"
+        cmd.extend(['-filter_complex', filter_str, '-map', '[out]', str(output_path)])
+        
+        try:
+            # Run FFmpeg quietly
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            print(f"          ✅ {filename} (Merged {len(inputs)} parts)")
+        except subprocess.CalledProcessError:
+            print(f"          ⚠️ FFmpeg merge failed, fallback to body only")
+            shutil.copy(temp_body, output_path)
+        except FileNotFoundError:
+             print(f"          ⚠️ FFmpeg not found, fallback to body only")
+             shutil.copy(temp_body, output_path)
+
+        # Cleanup temp
+        if temp_body.exists(): temp_body.unlink()
+        
         return output_path
 
 
 class TrendHunter:
     """Reddit topic hunter"""
-    
     SUBREDDITS = ['GiftIdeas', 'weddingplanning', 'relationship_advice']
     
     def get_topics(self, limit: int = 15) -> List[Dict]:
         print(f"📡 Scanning Reddit...")
-        
         trends = []
         headers = {'User-Agent': 'SayPlayBot/1.0'}
-        
         for subreddit in self.SUBREDDITS:
             try:
-                url = f"https://www.reddit.com/r/{subreddit}/top.json?t=week&limit={limit}"
+                url = f"[https://www.reddit.com/r/](https://www.reddit.com/r/){subreddit}/top.json?t=week&limit={limit}"
                 resp = requests.get(url, headers=headers, timeout=10)
-                
                 if resp.status_code == 200:
                     data = resp.json()
-                    
                     for post in data['data']['children']:
-                        post_data = post['data']
-                        
-                        if len(post_data.get('selftext', '')) > 100:
-                            trends.append({
-                                'title': post_data['title'],
-                                'score': post_data['score']
-                            })
-            except:
-                pass
-        
+                        if len(post['data'].get('selftext', '')) > 100:
+                            trends.append({'title': post['data']['title'], 'score': post['data']['score']})
+            except: pass
         trends.sort(key=lambda x: x['score'], reverse=True)
-        
         if not trends:
-            trends = [
-                {'title': 'Unique Wedding Gifts', 'score': 1000},
-                {'title': 'Anniversary Ideas UK', 'score': 900},
-                {'title': 'Birthday Gifts Dad', 'score': 850},
-                {'title': 'Long Distance Gifts', 'score': 800},
-                {'title': 'Sentimental Mum Gifts', 'score': 750},
-                {'title': 'Graduation Gifts', 'score': 700},
-                {'title': 'Baby Shower Ideas', 'score': 650},
-                {'title': 'Retirement Gifts', 'score': 600},
-                {'title': 'Christmas Fillers UK', 'score': 550},
-                {'title': 'Valentines Guide', 'score': 500},
-                {'title': 'Easter Gift Baskets', 'score': 450},
-                {'title': 'New Baby Presents', 'score': 400},
-                {'title': 'Housewarming Gifts', 'score': 350},
-                {'title': 'Teacher Appreciation', 'score': 300},
-                {'title': 'Thank You Gifts', 'score': 250}
-            ]
-        
-        selected = trends[:limit]
-        print(f"   ✅ {len(selected)} topics found")
-        return selected
+            trends = [{'title': 'Unique Wedding Gifts', 'score': 1000}, {'title': 'Birthday Gifts Dad', 'score': 850}]
+        return trends[:limit]
 
 
 async def main():
     print("\n" + "="*70)
-    print("TITAN V7 PERSISTENT - Dashboard + Metadata + 6-Tier Cascade")
+    print("TITAN V7.1 - FIXED: Images, Links & FFmpeg Audio")
     print("="*70 + "\n")
     
     start_time = datetime.now()
@@ -807,8 +570,21 @@ async def main():
     output_dir.mkdir(exist_ok=True)
     
     web_dir = output_dir / 'web'
+    assets_dir = web_dir / 'assets'
+    
     for d in ['blog', 'podcasts', 'seo', 'assets']:
         (web_dir / d).mkdir(parents=True, exist_ok=True)
+    
+    # --- FIX: COPY IMAGE ASSETS TO OUTPUT ---
+    print(f"\n📂 Copying visual assets...")
+    runtime_assets = Path("runtime_assets")
+    if runtime_assets.exists():
+        for item in runtime_assets.glob("*.png"):
+            shutil.copy(item, assets_dir / item.name)
+            print(f"   ✅ Copied {item.name}")
+    else:
+        print("   ⚠️ runtime_assets not found, images might be missing")
+    # ----------------------------------------
     
     # Initialize managers
     history_file = Path('content_history.json')
@@ -816,169 +592,73 @@ async def main():
     dashboard_gen = DashboardIndexGenerator()
     
     gemini_key = os.getenv('GEMINI_API_KEY')
-    
     brain = ContentBrain(gemini_key)
     design = DesignEngine()
     audio = AudioStudio()
     hunter = TrendHunter()
     
-    cities = ['London', 'Birmingham', 'Manchester', 'Liverpool', 'Leeds',
-              'Glasgow', 'Edinburgh', 'Bristol', 'Cardiff', 'Sheffield']
+    cities = ['London', 'Birmingham', 'Manchester', 'Liverpool', 'Leeds', 'Glasgow', 'Bristol']
     
-    print(f"\n{'='*70}")
-    print("PHASE 1: TOPIC HUNTING")
-    print(f"{'='*70}")
-    
+    # Phase 1: Hunt
     topics = hunter.get_topics(limit=15)
     
-    # PHASE 2: SEO PAGES
-    print(f"\n{'='*70}")
-    print("PHASE 2: SEO PAGES (with duplicate check)")
-    print(f"{'='*70}")
-    
+    # Phase 2: SEO
+    print(f"\nPHASE 2: SEO PAGES")
     seo_count = 0
     for i, topic in enumerate(topics, 1):
         city = random.choice(cities)
-        
-        if metadata.is_duplicate_seo(topic['title'], city):
-            print(f"\n⏭️  SEO {i}: {topic['title'][:40]} in {city} - DUPLICATE, skipping")
-            continue
-        
-        print(f"\n📌 SEO {seo_count + 1}: {topic['title'][:40]}... in {city}")
-        
+        if metadata.is_duplicate_seo(topic['title'], city): continue
+        print(f"\n📌 SEO {seo_count+1}: {topic['title'][:40]}... in {city}")
         content = brain.generate_seo_page(topic['title'], city)
-        
-        slug = topic['title'].lower().replace(' ', '-')[:40]
-        slug = ''.join(c for c in slug if c.isalnum() or c == '-')
+        slug = ''.join(c for c in topic['title'].lower().replace(' ', '-')[:40] if c.isalnum() or c == '-')
         filename = f'{slug}-{city.lower()}.html'
-        
-        page_path = web_dir / 'seo' / filename
-        design.build_seo_page(content, page_path)
-        
-        metadata.add_seo_page(
-            topic=topic['title'],
-            city=city,
-            filename=filename,
-            title=content.get('title', topic['title'])
-        )
-        
+        design.build_seo_page(content, web_dir / 'seo' / filename)
+        metadata.add_seo_page(topic['title'], city, filename, content.get('title', topic['title']))
         seo_count += 1
-        
-        if seo_count >= 10:
-            break
+        if seo_count >= 10: break
     
-    # PHASE 3: BLOG POSTS
-    print(f"\n{'='*70}")
-    print("PHASE 3: BLOG POSTS (with duplicate check)")
-    print(f"{'='*70}")
-    
+    # Phase 3: Blog
+    print(f"\nPHASE 3: BLOG POSTS")
     blog_count = 0
     for i, topic in enumerate(topics, 1):
-        if metadata.is_duplicate_blog(topic['title']):
-            print(f"\n⏭️  Blog {i}: {topic['title'][:40]} - DUPLICATE, skipping")
-            continue
-        
-        print(f"\n📝 Blog {blog_count + 1}: {topic['title'][:40]}...")
-        
+        if metadata.is_duplicate_blog(topic['title']): continue
+        print(f"\n📝 Blog {blog_count+1}: {topic['title'][:40]}...")
         content = brain.generate_blog(topic['title'])
-        
-        slug = topic['title'].lower().replace(' ', '-')[:40]
-        slug = ''.join(c for c in slug if c.isalnum() or c == '-')
+        slug = ''.join(c for c in topic['title'].lower().replace(' ', '-')[:40] if c.isalnum() or c == '-')
         filename = f'{slug}.html'
-        
-        page_path = web_dir / 'blog' / filename
-        design.build_blog_page(content, page_path)
-        
-        metadata.add_blog_post(
-            topic=topic['title'],
-            filename=filename,
-            title=content.get('title', topic['title'])
-        )
-        
+        design.build_blog_page(content, web_dir / 'blog' / filename)
+        metadata.add_blog_post(topic['title'], filename, content.get('title', topic['title']))
         blog_count += 1
-        
-        if blog_count >= 10:
-            break
+        if blog_count >= 10: break
     
-    # PHASE 4: PODCASTS
-    print(f"\n{'='*70}")
-    print("PHASE 4: PODCASTS (with duplicate check + episode numbering)")
-    print(f"{'='*70}")
-    
+    # Phase 4: Podcasts
+    print(f"\nPHASE 4: PODCASTS")
     podcast_count = 0
     for i, topic in enumerate(topics, 1):
-        if metadata.is_duplicate_podcast(topic['title']):
-            print(f"\n⏭️  Podcast {i}: {topic['title'][:40]} - DUPLICATE, skipping")
-            continue
-        
+        if metadata.is_duplicate_podcast(topic['title']): continue
         episode_num = metadata.get_next_episode_number()
-        
-        print(f"\n🎙️  Podcast {podcast_count + 1} (Episode #{episode_num}): {topic['title'][:40]}...")
-        
+        print(f"\n🎙️  Ep #{episode_num}: {topic['title'][:40]}...")
         script = brain.generate_podcast_script(topic['title'])
-        
-        slug = topic['title'].lower().replace(' ', '-')[:30]
-        slug = ''.join(c for c in slug if c.isalnum() or c == '-')
-        filename = f'sayplay_ep_{episode_num:03d}_{slug}.mp3'
-        
+        slug = ''.join(c for c in topic['title'].lower().replace(' ', '-')[:30] if c.isalnum() or c == '-')
         await audio.generate_podcast(script, episode_num, slug, web_dir / 'podcasts')
-        
-        metadata.add_podcast(
-            topic=topic['title'],
-            filename=filename,
-            episode_num=episode_num
-        )
-        
+        filename = f'sayplay_ep_{episode_num:03d}_{slug}.mp3' # Logic repeated inside audio, but tracking here
+        metadata.add_podcast(topic['title'], filename, episode_num)
         podcast_count += 1
-        
-        if podcast_count >= 10:
-            break
+        if podcast_count >= 10: break
     
-    # PHASE 5: SAVE METADATA
-    print(f"\n{'='*70}")
-    print("PHASE 5: SAVING METADATA")
-    print(f"{'='*70}")
-    
+    # Phase 5 & 6
     metadata.save()
-    
-    # Copy history to output
     shutil.copy(history_file, web_dir / 'assets' / 'content_history.json')
-    print(f"   ✅ Metadata copied to output")
-    
-    # PHASE 6: GENERATE DASHBOARDS
-    print(f"\n{'='*70}")
-    print("PHASE 6: GENERATING DASHBOARD INDEXES")
-    print(f"{'='*70}")
     
     stats = metadata.get_stats()
-    
     dashboard_gen.generate_main_dashboard(web_dir / 'index.html', stats)
     dashboard_gen.generate_seo_index(web_dir / 'seo' / 'index.html', metadata.get_all_seo_pages())
     dashboard_gen.generate_blog_index(web_dir / 'blog' / 'index.html', metadata.get_all_blog_posts())
     dashboard_gen.generate_podcast_index(web_dir / 'podcasts' / 'index.html', metadata.get_all_podcasts())
     
     duration = (datetime.now() - start_time).total_seconds()
-    
-    print(f"\n{'='*70}")
-    print("TITAN V7 PERSISTENT COMPLETE!")
-    print(f"{'='*70}")
-    print(f"✅ {seo_count} SEO pages (new this run)")
-    print(f"✅ {blog_count} Blog posts (new this run)")
-    print(f"✅ {podcast_count} Podcasts (new this run)")
-    print(f"")
-    print(f"📊 TOTAL CONTENT IN SYSTEM:")
-    print(f"   • Total SEO pages: {stats['total_seo']}")
-    print(f"   • Total Blog posts: {stats['total_blog']}")
-    print(f"   • Total Podcasts: {stats['total_podcasts']}")
-    print(f"   • Latest Episode: #{stats['last_episode']}")
-    print(f"")
-    print(f"✅ Dashboard generated with all indexes")
-    print(f"✅ 6-Tier AI Cascade: UNBREAKABLE")
-    print(f"\n⏱  Duration: {int(duration // 60)}m {int(duration % 60)}s")
-    print(f"{'='*70}\n")
-    
+    print(f"\nSUCCESS! {seo_count} SEO, {blog_count} Blogs, {podcast_count} Podcasts. Time: {int(duration)}s")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(asyncio.run(main()))
