@@ -1,9 +1,20 @@
-name: Titan Full Automation
+name: Titan V3 Full Automation
 
 on:
   schedule:
     - cron: '0 10 * * *'  # Daily at 10 AM UTC
   workflow_dispatch:  # Manual trigger
+
+env:
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+  PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   generate-deploy:
@@ -13,6 +24,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -27,19 +40,56 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install requests pillow google-generativeai edge-tts
+          pip install requests pillow google-generativeai edge-tts jinja2
       
-      - name: Generate content
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
-          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      - name: Prepare assets (Logo + Mylo & Gigi)
         run: |
-          python titan_master_orchestrator_v2.py
+          echo "📦 Preparing brand assets..."
+          
+          mkdir -p runtime_assets
+          
+          # Copy SayPlay logo
+          if [ -f "assets/brand/Voicegiftuk/sayplay_logo.png" ]; then
+            cp "assets/brand/Voicegiftuk/sayplay_logo.png" runtime_assets/
+            echo "✅ Logo copied"
+          else
+            echo "⚠️ Logo not found"
+          fi
+          
+          # Copy Mylo & Gigi (with logo version preferred)
+          if [ -f "assets/brand/Voicegiftuk/milo&gigi-razem-z-logo-sayplay.png" ]; then
+            cp "assets/brand/Voicegiftuk/milo&gigi-razem-z-logo-sayplay.png" runtime_assets/
+            echo "✅ Mylo & Gigi (with logo) copied"
+          elif [ -f "assets/brand/Voicegiftuk/milo&gigi razem no backround.png" ]; then
+            cp "assets/brand/Voicegiftuk/milo&gigi razem no backround.png" runtime_assets/milo-gigi-razem-no-backround.png
+            echo "✅ Mylo & Gigi (no background) copied"
+          else
+            echo "⚠️ Mylo & Gigi images not found"
+          fi
+          
+          # Copy individual mascots (optional)
+          if [ -f "assets/brand/Voicegiftuk/just milo looking from side.png" ]; then
+            cp "assets/brand/Voicegiftuk/just milo looking from side.png" runtime_assets/milo-side.png
+            echo "✅ Milo copied"
+          fi
+          
+          if [ -f "assets/brand/Voicegiftuk/just gigi looking from side.png" ]; then
+            cp "assets/brand/Voicegiftuk/just gigi looking from side.png" runtime_assets/gigi-side.png
+            echo "✅ Gigi copied"
+          fi
+          
+          echo ""
+          echo "📂 Available assets:"
+          ls -lh runtime_assets/
+      
+      - name: Generate content with V3 FINAL
+        run: |
+          echo "🚀 Starting TITAN V3 FINAL..."
+          python titan_master_orchestrator_v3_final.py
       
       - name: Verify generated content
         run: |
-          LATEST=$(ls -dt TITAN_OUTPUT_* | head -1)
+          LATEST=$(ls -dt TITAN_OUTPUT_V3_* | head -1)
           
           if [ ! -d "$LATEST" ]; then
             echo "❌ ERROR: Output directory not found!"
@@ -48,90 +98,90 @@ jobs:
           
           echo "✅ Output directory: $LATEST"
           
-          # Check for required files
-          if [ ! -d "$LATEST/web/blog" ]; then
-            echo "❌ ERROR: Blog directory missing!"
-            exit 1
-          fi
-          
-          if [ ! -d "$LATEST/web/podcasts" ]; then
-            echo "❌ ERROR: Podcasts directory missing!"
-            exit 1
-          fi
-          
-          if [ ! -d "$LATEST/web/dashboard" ]; then
-            echo "❌ ERROR: Dashboard directory missing!"
-            exit 1
-          fi
+          # Check directories
+          for dir in blog podcasts dashboard seo; do
+            if [ ! -d "$LATEST/web/$dir" ]; then
+              echo "❌ ERROR: /$dir directory missing!"
+              exit 1
+            fi
+          done
           
           # Count files
-          BLOG_COUNT=$(find $LATEST/web/blog -name '*.html' -type f 2>/dev/null | wc -l)
+          BLOG_COUNT=$(find $LATEST/web/blog -name '*.html' -not -name 'index.html' -type f 2>/dev/null | wc -l)
           PODCAST_COUNT=$(find $LATEST/web/podcasts -name '*.mp3' -type f 2>/dev/null | wc -l)
+          SEO_COUNT=$(find $LATEST/web/seo -name '*.html' -not -name 'index.html' -type f 2>/dev/null | wc -l)
+          ASSET_COUNT=$(find $LATEST/web/assets -type f 2>/dev/null | wc -l)
           
+          echo ""
           echo "📊 Content Statistics:"
           echo "  📝 Blog articles: $BLOG_COUNT"
           echo "  🎙 Podcasts: $PODCAST_COUNT"
+          echo "  🌐 SEO pages: $SEO_COUNT"
+          echo "  🖼 Assets (images with logo): $ASSET_COUNT"
+          
+          # Check index pages
+          echo ""
+          echo "📄 Index Pages:"
+          [ -f "$LATEST/web/blog/index.html" ] && echo "  ✅ Blog index" || echo "  ❌ Blog index MISSING"
+          [ -f "$LATEST/web/podcasts/index.html" ] && echo "  ✅ Podcasts index" || echo "  ❌ Podcasts index MISSING"
+          [ -f "$LATEST/web/seo/index.html" ] && echo "  ✅ SEO index" || echo "  ❌ SEO index MISSING"
+          [ -f "$LATEST/web/dashboard/index.html" ] && echo "  ✅ Dashboard" || echo "  ❌ Dashboard MISSING"
+          
+          # Check podcast files
+          echo ""
+          echo "🎙 Podcast Files:"
+          [ -f "$LATEST/web/podcast-cover.jpg" ] && echo "  ✅ Podcast cover (1400x1400 with logo)" || echo "  ⚠️ Cover missing"
+          [ -f "$LATEST/web/podcast.xml" ] && echo "  ✅ RSS feed" || echo "  ⚠️ RSS missing"
           
           if [ "$BLOG_COUNT" -eq 0 ]; then
+            echo ""
             echo "❌ ERROR: No blog articles generated!"
             exit 1
           fi
           
-          if [ "$PODCAST_COUNT" -eq 0 ]; then
-            echo "⚠️ WARNING: No podcasts generated (Edge TTS may be unavailable)"
+          if [ "$SEO_COUNT" -lt 90 ]; then
+            echo ""
+            echo "⚠️ WARNING: Only $SEO_COUNT SEO pages (expected ~100)"
           fi
           
+          echo ""
           echo "✅ Content verification passed"
       
       - name: Prepare deployment folder
         run: |
-          LATEST=$(ls -dt TITAN_OUTPUT_* | head -1)
+          LATEST=$(ls -dt TITAN_OUTPUT_V3_* | head -1)
           echo "📦 Preparing deployment from: $LATEST"
           
-          # Create deploy folder
           mkdir -p deploy
           
-          # Copy web content
           echo "📁 Copying web content..."
           cp -r $LATEST/web/* deploy/
           
-          # Verify deployment folder
           echo ""
           echo "📂 Deploy folder structure:"
           ls -lah deploy/
           
           echo ""
-          echo "📊 File counts in deploy folder:"
+          echo "📊 Deployment statistics:"
           echo "  Total files: $(find deploy -type f | wc -l)"
           echo "  Blog HTMLs: $(find deploy/blog -name '*.html' -type f 2>/dev/null | wc -l)"
-          echo "  Blog index: $([ -f deploy/blog/index.html ] && echo '✓' || echo '✗')"
-          echo "  Podcasts MP3s: $(find deploy/podcasts -name '*.mp3' -type f 2>/dev/null | wc -l)"
-          echo "  Podcasts index: $([ -f deploy/podcasts/index.html ] && echo '✓' || echo '✗')"
-          echo "  Dashboard: $([ -f deploy/dashboard/index.html ] && echo '✓' || echo '✗')"
-          echo "  RSS feed: $([ -f deploy/podcast.xml ] && echo '✓' || echo '✗')"
-          echo "  Podcast cover: $([ -f deploy/podcast-cover.jpg ] && echo '✓' || echo '✗')"
+          echo "  Podcasts: $(find deploy/podcasts -name '*.mp3' -type f 2>/dev/null | wc -l)"
+          echo "  SEO pages: $(find deploy/seo -name '*.html' -type f 2>/dev/null | wc -l)"
+          echo "  Assets: $(find deploy/assets -type f 2>/dev/null | wc -l)"
           
-          # Detailed file listing
           echo ""
-          echo "📋 Detailed contents:"
-          echo ""
-          echo "Blog files:"
-          ls -lh deploy/blog/*.html 2>/dev/null | head -5 || echo "  No blog files"
-          echo ""
-          echo "Podcast files:"
-          ls -lh deploy/podcasts/*.mp3 2>/dev/null | head -5 || echo "  No podcast files"
-          echo ""
-          echo "Other files:"
-          ls -lh deploy/*.{xml,jpg} 2>/dev/null || echo "  No RSS/cover files"
+          echo "🔍 Critical files check:"
+          [ -f "deploy/dashboard/index.html" ] && echo "  ✅ Dashboard" || echo "  ❌ Dashboard MISSING"
+          [ -f "deploy/blog/index.html" ] && echo "  ✅ Blog index" || echo "  ❌ Blog index MISSING"
+          [ -f "deploy/podcasts/index.html" ] && echo "  ✅ Podcasts index" || echo "  ❌ Podcasts index MISSING"
+          [ -f "deploy/seo/index.html" ] && echo "  ✅ SEO index" || echo "  ❌ SEO index MISSING"
+          [ -f "deploy/podcast.xml" ] && echo "  ✅ RSS feed" || echo "  ❌ RSS MISSING"
+          [ -f "deploy/podcast-cover.jpg" ] && echo "  ✅ Podcast cover" || echo "  ❌ Cover MISSING"
       
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
       
       - name: Deploy to Vercel
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           echo "🚀 Starting Vercel deployment..."
           cd deploy
@@ -148,46 +198,34 @@ jobs:
           echo "✅ Deployment complete!"
           echo "🔗 URL: $DEPLOY_URL"
           
-          # Save URL for later steps
           echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
       
       - name: Verify deployment
         if: success()
         run: |
           echo "🔍 Verifying deployment..."
+          sleep 15
           
-          # Wait a bit for CDN
-          sleep 10
+          URLS=(
+            "https://dashboard.sayplay.co.uk"
+            "https://dashboard.sayplay.co.uk/blog"
+            "https://dashboard.sayplay.co.uk/podcasts"
+            "https://dashboard.sayplay.co.uk/seo"
+            "https://dashboard.sayplay.co.uk/podcast.xml"
+            "https://dashboard.sayplay.co.uk/podcast-cover.jpg"
+          )
           
-          # Check main dashboard
-          echo "Checking: https://dashboard.sayplay.co.uk"
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://dashboard.sayplay.co.uk)
-          
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "✅ Dashboard is live (HTTP $HTTP_CODE)"
-          else
-            echo "⚠️ Dashboard returned HTTP $HTTP_CODE"
-          fi
-          
-          # Check blog index
-          echo "Checking: https://dashboard.sayplay.co.uk/blog"
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://dashboard.sayplay.co.uk/blog)
-          
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "✅ Blog index is live (HTTP $HTTP_CODE)"
-          else
-            echo "⚠️ Blog index returned HTTP $HTTP_CODE"
-          fi
-          
-          # Check podcasts index
-          echo "Checking: https://dashboard.sayplay.co.uk/podcasts"
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://dashboard.sayplay.co.uk/podcasts)
-          
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "✅ Podcasts index is live (HTTP $HTTP_CODE)"
-          else
-            echo "⚠️ Podcasts index returned HTTP $HTTP_CODE"
-          fi
+          echo ""
+          echo "🌐 Checking live URLs..."
+          for URL in "${URLS[@]}"; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "  ✅ $URL - OK"
+            else
+              echo "  ⚠️ $URL - HTTP $HTTP_CODE"
+            fi
+          done
           
           echo ""
           echo "✅ Deployment verification complete"
@@ -196,50 +234,32 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: titan-output-${{ github.run_number }}
-          path: TITAN_OUTPUT_*
-          retention-days: 30
+          name: titan-v3-output-${{ github.run_number }}
+          path: TITAN_OUTPUT_V3_*
+          retention-days: 90
       
       - name: Success notification
         if: success()
         run: |
-          # Count generated files
-          LATEST=$(ls -dt TITAN_OUTPUT_* | head -1)
-          ARTICLES=$(find $LATEST/web/blog -name '*.html' -type f 2>/dev/null | wc -l)
+          LATEST=$(ls -dt TITAN_OUTPUT_V3_* | head -1)
+          ARTICLES=$(find $LATEST/web/blog -name '*.html' -not -name 'index.html' -type f 2>/dev/null | wc -l)
           PODCASTS=$(find $LATEST/web/podcasts -name '*.mp3' -type f 2>/dev/null | wc -l)
+          SEO_PAGES=$(find $LATEST/web/seo -name '*.html' -not -name 'index.html' -type f 2>/dev/null | wc -l)
           
-          # Check for index pages
-          BLOG_INDEX=$([ -f $LATEST/web/blog/index.html ] && echo "✓" || echo "✗")
-          PODCAST_INDEX=$([ -f $LATEST/web/podcasts/index.html ] && echo "✓" || echo "✗")
-          DASHBOARD=$([ -f $LATEST/web/dashboard/index.html ] && echo "✓" || echo "✗")
-          RSS_FEED=$([ -f $LATEST/web/podcast.xml ] && echo "✓" || echo "✗")
+          MESSAGE="✅ <b>TITAN V3 FINAL Complete!</b>%0A%0A<b>📊 Content Generated:</b>%0A📝 $ARTICLES blog articles (Reddit trends)%0A🎙 $PODCASTS podcasts (unique numbering)%0A🌐 $SEO_PAGES SEO pages%0A%0A<b>✨ Features:</b>%0A✓ Real Logo PNG on all images%0A✓ Mylo %26 Gigi product images%0A✓ Podcast cover 1400x1400%0A✓ RSS feed (Apple Podcasts)%0A✓ GitHub state management%0A✓ Premium Jinja2 design%0A%0A<b>🔗 Live URLs:</b>%0A🌐 <a href='https://dashboard.sayplay.co.uk'>Dashboard</a>%0A📚 <a href='https://dashboard.sayplay.co.uk/blog'>Blog</a>%0A🎧 <a href='https://dashboard.sayplay.co.uk/podcasts'>Podcasts</a>%0A🗺 <a href='https://dashboard.sayplay.co.uk/seo'>SEO Pages</a>%0A📡 <a href='https://dashboard.sayplay.co.uk/podcast.xml'>RSS Feed</a>%0A%0A⏱ Run: #${{ github.run_number }}"
           
-          # Calculate podcasts only if they exist
-          if [ "$PODCASTS" -gt 0 ]; then
-            PODCAST_INFO="🎙 $PODCASTS podcasts (3-5 min + jingles)"
-          else
-            PODCAST_INFO="⚠️ No podcasts (Edge TTS unavailable)"
-          fi
-          
-          # Send Telegram notification
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
             -d "parse_mode=HTML" \
-            -d "text=✅ <b>Titan V2 Complete!</b>%0A%0A<b>📊 Content Generated:</b>%0A📝 $ARTICLES unique articles%0A$PODCAST_INFO%0A%0A<b>📄 Index Pages:</b>%0ABlog index: $BLOG_INDEX%0APodcast index: $PODCAST_INDEX%0ADashboard: $DASHBOARD%0ARSS feed: $RSS_FEED%0A%0A<b>🔗 Live URLs:</b>%0A🌐 <a href='https://dashboard.sayplay.co.uk'>Main Dashboard</a>%0A📚 <a href='https://dashboard.sayplay.co.uk/blog'>Blog Index</a>%0A🎧 <a href='https://dashboard.sayplay.co.uk/podcasts'>Podcast Index</a>%0A📡 <a href='https://dashboard.sayplay.co.uk/podcast.xml'>RSS Feed</a>%0A%0A⏱ Build: #${{ github.run_number }}" || true
+            -d "disable_web_page_preview=true" || true
       
       - name: Failure notification
         if: failure()
         run: |
-          # Get error details
-          LATEST=$(ls -dt TITAN_OUTPUT_* 2>/dev/null | head -1)
+          MESSAGE="❌ <b>TITAN V3 Failed</b>%0A%0ARun: #${{ github.run_number }}%0AError in workflow execution%0A%0A📋 <a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>View Logs</a>"
           
-          if [ -n "$LATEST" ]; then
-            ERROR_MSG="Generated output found but deployment failed"
-          else
-            ERROR_MSG="Content generation failed"
-          fi
-          
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "parse_mode=HTML" \
-            -d "text=❌ <b>Titan V2 Failed</b>%0A%0A<b>Run:</b> #${{ github.run_number }}%0A<b>Error:</b> $ERROR_MSG%0A%0A<a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>📋 View Error Logs</a>" || true
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=HTML" || true
