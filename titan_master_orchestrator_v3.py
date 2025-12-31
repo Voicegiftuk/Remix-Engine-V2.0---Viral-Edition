@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """
-TITAN V3 FINAL - FULLY WORKING PREMIUM STUDIO
-
-FIXES:
-- StateManager with GitHub persistence (no overwriting)
-- Podcast cover with logo (1400x1400)
-- RSS feed (Apple Podcasts compliant)
-- Logo overlay on ALL images
+TITAN V3 FINAL - FULLY WORKING WITH REAL ASSETS
+- Real SayPlay logo PNG overlay
 - Real Mylo & Gigi product images
-- Reddit trends for EVERYTHING
+- Reddit trends
+- GitHub state management
+- Premium Jinja2 design
 """
 import sys
 import os
@@ -54,16 +51,11 @@ except ImportError:
 
 
 class GitHubStateManager:
-    """
-    PERSISTENT State Manager - używa GitHub API jako storage
-    Zapisuje stan między runami workflow
-    """
+    """Persistent state using GitHub Issues API"""
     
     def __init__(self):
         self.token = os.getenv('GITHUB_TOKEN')
-        self.repo = os.getenv('GITHUB_REPOSITORY')  # format: "owner/repo"
-        
-        # Fallback do lokalnego pliku
+        self.repo = os.getenv('GITHUB_REPOSITORY')
         self.local_file = Path("titan_memory.json")
         
         if not self.token or not self.repo:
@@ -74,7 +66,6 @@ class GitHubStateManager:
             print("✅ GitHub state enabled")
     
     def _get_state_from_github(self) -> dict:
-        """Pobiera stan z GitHub Issues"""
         if not self.use_github:
             return self._load_local()
         
@@ -91,7 +82,6 @@ class GitHubStateManager:
             if response.status_code == 200:
                 issues = response.json()
                 if issues:
-                    # Parse state from issue body
                     state_text = issues[0]['body']
                     return json.loads(state_text)
         except Exception as e:
@@ -100,7 +90,6 @@ class GitHubStateManager:
         return {"last_episode": 0, "processed_trends": [], "last_run": None}
     
     def _save_state_to_github(self, state: dict):
-        """Zapisuje stan do GitHub Issues"""
         if not self.use_github:
             self._save_local(state)
             return
@@ -112,20 +101,17 @@ class GitHubStateManager:
                 'Accept': 'application/vnd.github.v3+json'
             }
             
-            # Check if state issue exists
             params = {'labels': 'titan-state', 'state': 'open'}
             response = requests.get(url, headers=headers, params=params, timeout=10)
             
             state_json = json.dumps(state, indent=2)
             
             if response.status_code == 200 and response.json():
-                # Update existing issue
                 issue_number = response.json()[0]['number']
                 update_url = f"{url}/{issue_number}"
                 data = {'body': state_json}
                 requests.patch(update_url, headers=headers, json=data, timeout=10)
             else:
-                # Create new issue
                 data = {
                     'title': 'TITAN State Storage',
                     'body': state_json,
@@ -140,14 +126,12 @@ class GitHubStateManager:
             self._save_local(state)
     
     def _load_local(self) -> dict:
-        """Load from local file"""
         if self.local_file.exists():
             with open(self.local_file, 'r') as f:
                 return json.load(f)
         return {"last_episode": 0, "processed_trends": [], "last_run": None}
     
     def _save_local(self, state: dict):
-        """Save to local file"""
         with open(self.local_file, 'w') as f:
             json.dump(state, f, indent=2)
     
@@ -164,7 +148,7 @@ class GitHubStateManager:
 
 
 class TrendHunter:
-    """Reddit trend hunter - REAL user problems"""
+    """Reddit trend hunter"""
     
     SUBREDDITS = ['GiftIdeas', 'weddingplanning', 'relationship_advice', 'relationships']
     
@@ -212,7 +196,7 @@ class TrendHunter:
             {
                 'source': 'System',
                 'title': 'Unique wedding gifts for couples who have everything',
-                'context': 'People struggle to find meaningful gifts for couples.',
+                'context': 'People struggle to find meaningful gifts.',
                 'url': 'internal',
                 'score': 1000
             }
@@ -221,35 +205,71 @@ class TrendHunter:
 
 class PremiumImageGenerator:
     """
-    Image generator with LOGO OVERLAY on everything
+    Image generator with REAL LOGO PNG overlay
+    Uses actual SayPlay logo and Mylo & Gigi images
     """
     
     def __init__(self):
         self.unsplash_key = os.getenv('UNSPLASH_ACCESS_KEY', '')
         
-        # Logo SayPlay (będzie overlayed)
-        self.logo_text = "SayPlay"
+        # Load REAL logo PNG
+        logo_paths = [
+            Path("runtime_assets/sayplay_logo.png"),
+            Path("assets/brand/Voicegiftuk/sayplay_logo.png")
+        ]
+        
+        self.logo_image = None
+        for logo_path in logo_paths:
+            if logo_path.exists():
+                try:
+                    self.logo_image = Image.open(logo_path).convert('RGBA')
+                    print(f"✅ Logo loaded: {logo_path}")
+                    break
+                except Exception as e:
+                    print(f"⚠️ Logo load error: {e}")
+        
+        if not self.logo_image:
+            print("⚠️ Logo not found, will use text fallback")
+        
+        # Load Mylo & Gigi product image
+        product_paths = [
+            Path("runtime_assets/milo-gigi-razem-z-logo-sayplay.png"),
+            Path("runtime_assets/milo-gigi-razem-no-backround.png"),
+            Path("assets/brand/Voicegiftuk/milo&gigi-razem-z-logo-sayplay.png"),
+            Path("assets/brand/Voicegiftuk/milo&gigi razem no backround.png")
+        ]
+        
+        self.product_image_path = None
+        for prod_path in product_paths:
+            if prod_path.exists():
+                self.product_image_path = str(prod_path)
+                print(f"✅ Product image found: {prod_path}")
+                break
+        
+        if not self.product_image_path:
+            print("⚠️ Product image not found, will use placeholder")
+            self.product_image_path = "https://sayplay.co.uk/images/product-collection.jpg"
     
     def get_hero_image_with_logo(self, keywords: List[str], output_path: Path) -> str:
-        """Generate hero image with SayPlay logo overlay"""
+        """Generate hero image with logo overlay"""
         
         print(f"      🖼️ Generating hero image with logo...")
         
-        # 1. Get base image from Unsplash
+        # Get base image
         img = self._fetch_base_image(keywords)
         
-        # 2. Add logo overlay
+        # Add logo overlay
         img = self._add_logo_overlay(img, size=(1600, 900))
         
-        # 3. Save
+        # Save
         img.save(output_path, 'JPEG', quality=95)
         
-        print(f"         ✅ Saved: {output_path.name}")
+        print(f"         ✅ Saved with logo: {output_path.name}")
         
         return str(output_path)
     
     def _fetch_base_image(self, keywords: List[str]) -> Image.Image:
-        """Fetch from Unsplash or generate gradient"""
+        """Fetch from Unsplash or gradient"""
         
         query = '+'.join(keywords[:2] + ['emotion', 'lifestyle'])
         
@@ -292,14 +312,14 @@ class PremiumImageGenerator:
     
     def _add_logo_overlay(self, img: Image.Image, size: tuple) -> Image.Image:
         """
-        Add SayPlay logo overlay
+        Add REAL LOGO PNG overlay
         - Dark gradient at bottom
-        - "Say" (white) + "Play" (gold)
+        - Actual SayPlay logo PNG
         """
         
         width, height = size
         
-        # Create overlay
+        # Create dark overlay
         overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
         overlay_draw = ImageDraw.Draw(overlay)
         
@@ -314,37 +334,46 @@ class PremiumImageGenerator:
         img = img.convert('RGBA')
         img = Image.alpha_composite(img, overlay)
         
-        # Add text
-        draw = ImageDraw.Draw(img)
-        
-        try:
-            logo_size = max(50, int(height * 0.09))
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", logo_size)
-        except:
-            logo_size = 50
-            font = ImageFont.load_default()
-        
-        # Position: bottom-right
-        logo_x = width - int(width * 0.35)
-        logo_y = height - int(height * 0.15)
-        
-        # "Say" (white)
-        draw.text((logo_x, logo_y), "Say", fill=(255, 255, 255), font=font)
-        
-        # "Play" (gold)
-        say_bbox = draw.textbbox((0, 0), "Say", font=font)
-        say_width = say_bbox[2] - say_bbox[0]
-        draw.text((logo_x + say_width, logo_y), "Play", fill=(255, 215, 0), font=font)
+        # Add logo (PNG or text fallback)
+        if self.logo_image:
+            # Resize logo to fit (8% of height)
+            logo_height = int(height * 0.08)
+            aspect_ratio = self.logo_image.width / self.logo_image.height
+            logo_width = int(logo_height * aspect_ratio)
+            
+            logo_resized = self.logo_image.resize((logo_width, logo_height), Image.Resampling.LANCZOS)
+            
+            # Position: bottom-right with padding
+            logo_x = width - logo_width - int(width * 0.04)
+            logo_y = height - logo_height - int(height * 0.04)
+            
+            # Paste logo with alpha
+            img.paste(logo_resized, (logo_x, logo_y), logo_resized)
+            
+        else:
+            # Text fallback
+            draw = ImageDraw.Draw(img)
+            try:
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 50)
+            except:
+                font = ImageFont.load_default()
+            
+            logo_x = width - int(width * 0.35)
+            logo_y = height - int(height * 0.15)
+            
+            draw.text((logo_x, logo_y), "Say", fill=(255, 255, 255), font=font)
+            say_bbox = draw.textbbox((0, 0), "Say", font=font)
+            say_width = say_bbox[2] - say_bbox[0]
+            draw.text((logo_x + say_width, logo_y), "Play", fill=(255, 215, 0), font=font)
         
         return img.convert('RGB')
     
     def generate_podcast_cover(self, output_path: Path):
         """
-        Generate podcast cover 1400x1400 with logo
-        RESTORED FROM V2!
+        Generate podcast cover 1400x1400 with REAL LOGO
         """
         
-        print("\n🎨 Generating podcast cover (1400x1400)...")
+        print("\n🎨 Generating podcast cover (1400x1400 with logo)...")
         
         # Gradient background
         img = Image.new('RGB', (1400, 1400))
@@ -357,46 +386,68 @@ class PremiumImageGenerator:
             b = int(234 + (162 - 234) * progress)
             draw.line([(0, y), (1400, y)], fill=(r, g, b))
         
-        # Load fonts
-        try:
-            logo_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 200)
-            subtitle_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 70)
-            tagline_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 50)
-        except:
-            logo_font = ImageFont.load_default()
-            subtitle_font = logo_font
-            tagline_font = logo_font
+        img = img.convert('RGBA')
         
-        # "Say"
-        say_text = "Say"
-        say_bbox = draw.textbbox((0, 0), say_text, font=logo_font)
-        say_width = say_bbox[2] - say_bbox[0]
-        
-        # "Play"
-        play_text = "Play"
-        play_bbox = draw.textbbox((0, 0), play_text, font=logo_font)
-        play_width = play_bbox[2] - play_bbox[0]
-        
-        total_width = say_width + play_width
-        logo_x = (1400 - total_width) // 2
-        logo_y = 350
-        
-        draw.text((logo_x, logo_y), say_text, fill=(255, 255, 255), font=logo_font)
-        draw.text((logo_x + say_width, logo_y), play_text, fill=(255, 215, 0), font=logo_font)
-        
-        # Subtitle
-        subtitle = "GIFT GUIDE"
-        subtitle_bbox = draw.textbbox((0, 0), subtitle, font=subtitle_font)
-        subtitle_width = subtitle_bbox[2] - subtitle_bbox[0]
-        draw.text(((1400 - subtitle_width) // 2, 600), subtitle, fill=(255, 255, 255), font=subtitle_font)
-        
-        # Tagline
-        tagline = "Real insights for meaningful gifting"
-        tagline_bbox = draw.textbbox((0, 0), tagline, font=tagline_font)
-        tagline_width = tagline_bbox[2] - tagline_bbox[0]
-        draw.text(((1400 - tagline_width) // 2, 720), tagline, fill=(255, 255, 255), font=tagline_font)
+        # Add REAL LOGO if available
+        if self.logo_image:
+            # Large logo for podcast cover (30% of height)
+            logo_height = int(1400 * 0.30)
+            aspect_ratio = self.logo_image.width / self.logo_image.height
+            logo_width = int(logo_height * aspect_ratio)
+            
+            logo_resized = self.logo_image.resize((logo_width, logo_height), Image.Resampling.LANCZOS)
+            
+            # Center logo
+            logo_x = (1400 - logo_width) // 2
+            logo_y = 350
+            
+            img.paste(logo_resized, (logo_x, logo_y), logo_resized)
+            
+            # Add text below logo
+            try:
+                subtitle_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 70)
+                tagline_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 50)
+            except:
+                subtitle_font = ImageFont.load_default()
+                tagline_font = ImageFont.load_default()
+            
+            draw = ImageDraw.Draw(img)
+            
+            subtitle = "GIFT GUIDE"
+            subtitle_bbox = draw.textbbox((0, 0), subtitle, font=subtitle_font)
+            subtitle_width = subtitle_bbox[2] - subtitle_bbox[0]
+            draw.text(((1400 - subtitle_width) // 2, 750), subtitle, fill=(255, 255, 255), font=subtitle_font)
+            
+            tagline = "Real insights for meaningful gifting"
+            tagline_bbox = draw.textbbox((0, 0), tagline, font=tagline_font)
+            tagline_width = tagline_bbox[2] - tagline_bbox[0]
+            draw.text(((1400 - tagline_width) // 2, 850), tagline, fill=(255, 255, 255), font=tagline_font)
+            
+        else:
+            # Text fallback (same as before)
+            draw = ImageDraw.Draw(img)
+            try:
+                logo_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 200)
+            except:
+                logo_font = ImageFont.load_default()
+            
+            say_text = "Say"
+            say_bbox = draw.textbbox((0, 0), say_text, font=logo_font)
+            say_width = say_bbox[2] - say_bbox[0]
+            
+            play_text = "Play"
+            play_bbox = draw.textbbox((0, 0), play_text, font=logo_font)
+            play_width = play_bbox[2] - play_bbox[0]
+            
+            total_width = say_width + play_width
+            logo_x = (1400 - total_width) // 2
+            logo_y = 350
+            
+            draw.text((logo_x, logo_y), say_text, fill=(255, 255, 255), font=logo_font)
+            draw.text((logo_x + say_width, logo_y), play_text, fill=(255, 215, 0), font=logo_font)
         
         # Save
+        img = img.convert('RGB')
         img.save(output_path, format='JPEG', quality=95)
         print(f"✅ Podcast cover saved: {output_path.name}")
 
@@ -412,14 +463,12 @@ class PremiumContentStudio:
             self.model = None
     
     def develop_content_strategy(self, trend: Dict) -> Dict:
-        """Generate content from Reddit trend"""
-        
         if not self.model:
             return self._fallback_content(trend)
         
         prompt = f"""Senior Content Strategist for 'SayPlay' - UK premium NFC voice/video message stickers.
 
-TARGET: UK millennials & Gen Z, emotionally intelligent
+TARGET: UK millennials & Gen Z
 VOICE: Empathetic, sophisticated, authentic
 
 REAL USER PROBLEM:
@@ -487,7 +536,7 @@ Return ONLY JSON, no markdown."""
 
 
 class PremiumDesignEngine:
-    """Jinja2 Templates - NO AI CSS"""
+    """Jinja2 Templates"""
     
     def __init__(self):
         if not JINJA2_AVAILABLE:
@@ -495,7 +544,6 @@ class PremiumDesignEngine:
             self.seo_template = None
             return
         
-        # BLOG TEMPLATE (same as before)
         self.blog_template_str = """<!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -554,7 +602,6 @@ class PremiumDesignEngine:
 </body>
 </html>"""
         
-        # SEO TEMPLATE (same as before)
         self.seo_template_str = """<!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -652,7 +699,7 @@ class PremiumDesignEngine:
 
 
 class PodcastGeneratorPremium:
-    """Podcast generator with state management"""
+    """Podcast generator"""
     
     async def generate_podcast(self, script: str, episode_num: int, slug: str, output_dir: Path) -> Path:
         if not EDGE_TTS_AVAILABLE:
@@ -671,10 +718,7 @@ class PodcastGeneratorPremium:
 
 
 def create_rss_feed_apple(podcasts: List[Dict], output_file: Path, cover_url: str):
-    """
-    Create Apple Podcasts compliant RSS feed
-    RESTORED FROM V2!
-    """
+    """Create Apple Podcasts RSS"""
     
     print(f"\n📡 Generating Apple Podcasts RSS...")
     
@@ -690,9 +734,7 @@ def create_rss_feed_apple(podcasts: List[Dict], output_file: Path, cover_url: st
     channel = SubElement(rss, 'channel')
     
     SubElement(channel, 'title').text = 'SayPlay Gift Guide'
-    
-    description_text = """Real insights for meaningful gifting. Discover thoughtful presents and ways to personalize every occasion with SayPlay voice message technology."""
-    
+    description_text = "Real insights for meaningful gifting."
     SubElement(channel, 'description').text = description_text
     SubElement(channel, 'link').text = 'https://dashboard.sayplay.co.uk'
     SubElement(channel, 'language').text = 'en-GB'
@@ -713,24 +755,20 @@ def create_rss_feed_apple(podcasts: List[Dict], output_file: Path, cover_url: st
     
     for podcast in podcasts:
         item = SubElement(channel, 'item')
-        
         episode_title = f"Episode {podcast['episode']}: {podcast['title']}"
         SubElement(item, 'title').text = episode_title
-        
-        episode_desc = f"Explore {podcast['title'].lower()}. Thoughtful gift ideas and creative ways to make gifts memorable."
+        episode_desc = f"Explore {podcast['title'].lower()}."
         SubElement(item, 'description').text = episode_desc
         SubElement(item, 'itunes:summary').text = episode_desc
         SubElement(item, 'itunes:author').text = 'SayPlay'
         SubElement(item, 'itunes:episode').text = str(podcast['episode'])
         SubElement(item, 'itunes:episodeType').text = 'full'
         SubElement(item, 'itunes:explicit').text = 'no'
-        
         SubElement(item, 'enclosure', {
             'url': f"https://dashboard.sayplay.co.uk/podcasts/{podcast['filename']}",
             'length': str(podcast['size']),
             'type': 'audio/mpeg'
         })
-        
         SubElement(item, 'guid').text = f"https://dashboard.sayplay.co.uk/podcasts/{podcast['filename']}"
         SubElement(item, 'pubDate').text = datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
         SubElement(item, 'itunes:duration').text = str(podcast['duration'])
@@ -740,7 +778,7 @@ def create_rss_feed_apple(podcasts: List[Dict], output_file: Path, cover_url: st
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(xml_string)
     
-    print(f"✅ Apple Podcasts RSS ({len(podcasts)} episodes)")
+    print(f"✅ RSS feed ({len(podcasts)} episodes)")
 
 
 def generate_seo_pages_v3(output_dir: Path, design_engine: PremiumDesignEngine) -> List[Dict]:
@@ -1018,12 +1056,12 @@ def create_dashboard_v3(stats: Dict, output_dir: Path):
     <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6 mt-8 text-white">
         <h3 class="text-xl mb-4"><i class="fas fa-check-circle mr-2"></i>System Status</h3>
         <div class="space-y-2 text-sm">
-            <div>✅ Reddit Trend Hunter</div>
-            <div>✅ Logo on ALL images</div>
+            <div>✅ Reddit Trends</div>
+            <div>✅ Real Logo PNG Overlay</div>
+            <div>✅ Mylo & Gigi Product Images</div>
             <div>✅ Podcast Cover 1400x1400</div>
             <div>✅ RSS Apple Podcasts</div>
-            <div>✅ GitHub State Management</div>
-            <div>✅ NO Overwriting</div>
+            <div>✅ GitHub State (No Overwriting)</div>
         </div>
     </div>
 </div>
@@ -1036,9 +1074,8 @@ def create_dashboard_v3(stats: Dict, output_dir: Path):
 
 async def main():
     print("\n" + "="*70)
-    print("TITAN V3 FINAL - FULLY WORKING")
-    print("✅ Reddit Trends • Logo Overlay • Podcast Cover • RSS Feed")
-    print("✅ GitHub State (no overwriting) • Premium Design")
+    print("TITAN V3 FINAL - WITH REAL ASSETS")
+    print("✅ Real Logo PNG • Mylo & Gigi • Reddit • GitHub State")
     print("="*70 + "\n")
     
     start_time = datetime.now()
@@ -1050,19 +1087,20 @@ async def main():
     for d in ['blog', 'podcasts', 'dashboard', 'seo']:
         (web_dir / d).mkdir(parents=True, exist_ok=True)
     
-    # Assets directory for images
     assets_dir = web_dir / 'assets'
     assets_dir.mkdir(exist_ok=True)
     
     gemini_key = os.getenv('GEMINI_API_KEY')
     
-    # Initialize with GitHub state
     state_mgr = GitHubStateManager()
     trend_hunter = TrendHunter()
     content_studio = PremiumContentStudio(gemini_key)
     design_engine = PremiumDesignEngine()
     image_gen = PremiumImageGenerator()
     podcast_gen = PodcastGeneratorPremium()
+    
+    # Get product image path
+    product_image_url = image_gen.product_image_path
     
     # PHASE 1: Reddit Trends
     print(f"\n{'='*70}")
@@ -1075,7 +1113,7 @@ async def main():
         print("❌ No trends, exiting")
         return 1
     
-    # PHASE 2: Blog & Podcasts (Reddit-based)
+    # PHASE 2: Blog & Podcasts
     print(f"\n{'='*70}")
     print(f"PHASE 2: CONTENT GENERATION ({len(trends)} trends)")
     print(f"{'='*70}")
@@ -1100,20 +1138,17 @@ async def main():
             hero_image_path
         )
         
-        # Product image URL (use placeholder for now, you can upload real one)
-        product_image_url = "https://sayplay.co.uk/images/product-collection.jpg"
-        
         # Build blog page
         page_path = web_dir / 'blog' / f'{slug}.html'
         design_engine.build_blog_page(
             content,
-            f'/assets/hero_{slug}.jpg',  # Relative path
+            f'/assets/hero_{slug}.jpg',
             product_image_url,
             page_path
         )
         print(f"      ✅ Page: {page_path.name}")
         
-        # Generate podcast (with state management)
+        # Generate podcast
         episode_num = state_mgr.get_next_episode_number()
         podcast_path = await podcast_gen.generate_podcast(
             content['podcast_script'],
@@ -1145,14 +1180,12 @@ async def main():
     
     # PHASE 3: Podcast Cover & RSS
     print(f"\n{'='*70}")
-    print("PHASE 3: PODCAST COVER & RSS FEED")
+    print("PHASE 3: PODCAST COVER & RSS")
     print(f"{'='*70}")
     
-    # Generate podcast cover with logo
     cover_path = web_dir / 'podcast-cover.jpg'
     image_gen.generate_podcast_cover(cover_path)
     
-    # Create RSS feed
     if podcasts:
         rss_path = web_dir / 'podcast.xml'
         cover_url = 'https://dashboard.sayplay.co.uk/podcast-cover.jpg'
@@ -1188,7 +1221,8 @@ async def main():
     print(f"✅ {len(articles)} Blog Articles (Reddit trends)")
     print(f"✅ {len(podcasts)} Podcasts (unique numbering)")
     print(f"✅ {len(seo_pages)} SEO Pages")
-    print(f"✅ Logo on ALL images")
+    print(f"✅ Real logo PNG on ALL images")
+    print(f"✅ Mylo & Gigi product images")
     print(f"✅ Podcast cover 1400x1400")
     print(f"✅ RSS feed Apple Podcasts")
     print(f"✅ GitHub state management")
