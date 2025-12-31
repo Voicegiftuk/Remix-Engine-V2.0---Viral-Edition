@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-TITAN V6 ULTIMATE CASCADE - 6-TIER AI FALLBACK
-Tier 1: Gemini 1.5 Pro
-Tier 2: Gemini 1.5 Flash
-Tier 3: Gemini 1.0 Pro
-Tier 4: OpenAI GPT-3.5 Turbo
-Tier 5: Groq Llama 3.1 70B
-Tier 6: Emergency Template (100% reliable)
+TITAN V7 PERSISTENT - Dashboard + Metadata + 6-Tier AI Cascade
+Version: 7.0
+Features:
+- 6-tier AI cascade (Gemini Pro/Flash/1.0, OpenAI, Groq, Emergency)
+- Content history tracking (prevents duplicates)
+- Automatic episode numbering
+- Dashboard generation with indexes
+- 100% reliability guarantee
 """
 import sys
 import os
@@ -16,6 +17,11 @@ import asyncio
 import json
 import random
 from typing import List, Dict, Optional
+import shutil
+
+# Import metadata managers
+from content_metadata_manager import ContentMetadataManager
+from dashboard_index_generator import DashboardIndexGenerator
 
 # Gemini
 try:
@@ -23,6 +29,7 @@ try:
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
+    print("⚠️ Gemini not available")
 
 # Audio
 try:
@@ -30,6 +37,7 @@ try:
     EDGE_TTS_AVAILABLE = True
 except ImportError:
     EDGE_TTS_AVAILABLE = False
+    print("⚠️ Edge TTS not available")
 
 # Templates
 try:
@@ -37,16 +45,17 @@ try:
     JINJA2_AVAILABLE = True
 except ImportError:
     JINJA2_AVAILABLE = False
+    print("⚠️ Jinja2 not available")
 
 import requests
 
 
 class AIConfig:
     """AI Models configuration"""
-    # Gemini models (FIX: bez -latest)
+    # Gemini models
     GEMINI_PRO = 'gemini-1.5-pro'
     GEMINI_FLASH = 'gemini-1.5-flash'
-    GEMINI_PRO_OLD = 'gemini-pro'  # Starszy, stabilniejszy
+    GEMINI_PRO_OLD = 'gemini-pro'
     
     # OpenAI
     OPENAI_MODEL = 'gpt-3.5-turbo'
@@ -61,7 +70,13 @@ class AIConfig:
 
 class ContentBrain:
     """
-    6-TIER AI CASCADE
+    6-TIER AI CASCADE with emergency fallback
+    Tier 1: Gemini 1.5 Pro (quality)
+    Tier 2: Gemini 1.5 Flash (speed)
+    Tier 3: Gemini 1.0 Pro (stability)
+    Tier 4: OpenAI GPT-3.5 (alternative)
+    Tier 5: Groq Llama 3.1 (free alternative)
+    Tier 6: Emergency Template (100% reliable)
     """
     
     def __init__(self, api_key: str):
@@ -82,45 +97,67 @@ class ContentBrain:
             print("✅ Groq configured")
     
     def generate_seo_page(self, topic: str, city: str) -> Dict:
-        """Generate SEO with 6-tier cascade"""
+        """Generate SEO page with 6-tier cascade"""
         
         print(f"      🧠 SEO: {topic} in {city}")
         
-        # TIER 1: Gemini 1.5 Pro
-        result = self._try_gemini_model(AIConfig.GEMINI_PRO, 'seo', topic, city)
-        if result:
-            print(f"         ✅ Gemini 1.5 Pro")
-            return result
+        # Try all AI tiers
+        for tier_name, method in [
+            ('Gemini 1.5 Pro', lambda: self._try_gemini(AIConfig.GEMINI_PRO, 'seo', topic, city)),
+            ('Gemini 1.5 Flash', lambda: self._try_gemini(AIConfig.GEMINI_FLASH, 'seo', topic, city)),
+            ('Gemini 1.0 Pro', lambda: self._try_gemini(AIConfig.GEMINI_PRO_OLD, 'seo', topic, city)),
+            ('OpenAI GPT-3.5', lambda: self._try_openai('seo', topic, city)),
+            ('Groq Llama 3.1', lambda: self._try_groq('seo', topic, city))
+        ]:
+            result = method()
+            if result:
+                print(f"         ✅ {tier_name}")
+                return result
         
-        # TIER 2: Gemini 1.5 Flash
-        result = self._try_gemini_model(AIConfig.GEMINI_FLASH, 'seo', topic, city)
-        if result:
-            print(f"         ✅ Gemini 1.5 Flash")
-            return result
-        
-        # TIER 3: Gemini 1.0 Pro (starszy)
-        result = self._try_gemini_model(AIConfig.GEMINI_PRO_OLD, 'seo', topic, city)
-        if result:
-            print(f"         ✅ Gemini 1.0 Pro")
-            return result
-        
-        # TIER 4: OpenAI GPT-3.5
-        result = self._try_openai('seo', topic, city)
-        if result:
-            print(f"         ✅ OpenAI GPT-3.5")
-            return result
-        
-        # TIER 5: Groq Llama
-        result = self._try_groq('seo', topic, city)
-        if result:
-            print(f"         ✅ Groq Llama 3.1")
-            return result
-        
-        # TIER 6: Emergency
-        print(f"         🚨 ALL AI FAILED - Emergency Template")
+        print(f"         🚨 Emergency Template")
         return self._emergency_seo(topic, city)
     
-    def _try_gemini_model(self, model_name: str, content_type: str, topic: str, city: str = '') -> Optional[Dict]:
+    def generate_blog(self, topic: str) -> Dict:
+        """Generate blog post with 6-tier cascade"""
+        
+        print(f"      📝 Blog: {topic}")
+        
+        for tier_name, method in [
+            ('Gemini 1.5 Pro', lambda: self._try_gemini(AIConfig.GEMINI_PRO, 'blog', topic)),
+            ('Gemini 1.5 Flash', lambda: self._try_gemini(AIConfig.GEMINI_FLASH, 'blog', topic)),
+            ('Gemini 1.0 Pro', lambda: self._try_gemini(AIConfig.GEMINI_PRO_OLD, 'blog', topic)),
+            ('OpenAI GPT-3.5', lambda: self._try_openai('blog', topic)),
+            ('Groq Llama 3.1', lambda: self._try_groq('blog', topic))
+        ]:
+            result = method()
+            if result:
+                print(f"         ✅ {tier_name}")
+                return result
+        
+        print(f"         🚨 Emergency Template")
+        return self._emergency_blog(topic)
+    
+    def generate_podcast_script(self, topic: str) -> str:
+        """Generate podcast script with 6-tier cascade"""
+        
+        print(f"      🎙️ Podcast: {topic}")
+        
+        for tier_name, method in [
+            ('Gemini 1.5 Pro', lambda: self._try_gemini(AIConfig.GEMINI_PRO, 'podcast', topic)),
+            ('Gemini 1.5 Flash', lambda: self._try_gemini(AIConfig.GEMINI_FLASH, 'podcast', topic)),
+            ('Gemini 1.0 Pro', lambda: self._try_gemini(AIConfig.GEMINI_PRO_OLD, 'podcast', topic)),
+            ('OpenAI GPT-3.5', lambda: self._try_openai('podcast', topic)),
+            ('Groq Llama 3.1', lambda: self._try_groq('podcast', topic))
+        ]:
+            result = method()
+            if result:
+                print(f"         ✅ {tier_name}")
+                return result
+        
+        print(f"         🚨 Emergency Template")
+        return self._emergency_podcast(topic)
+    
+    def _try_gemini(self, model_name: str, content_type: str, topic: str, city: str = '') -> Optional:
         """Try Gemini model"""
         if not self.has_gemini:
             return None
@@ -132,7 +169,7 @@ class ContentBrain:
                 prompt = self._get_seo_prompt(topic, city)
             elif content_type == 'blog':
                 prompt = self._get_blog_prompt(topic)
-            else:  # podcast
+            else:
                 prompt = self._get_podcast_prompt(topic)
             
             response = model.generate_content(
@@ -159,10 +196,9 @@ class ContentBrain:
             return json.loads(text)
             
         except Exception as e:
-            # Don't print full error, just note it failed
             return None
     
-    def _try_openai(self, content_type: str, topic: str, city: str = '') -> Optional[Dict]:
+    def _try_openai(self, content_type: str, topic: str, city: str = '') -> Optional:
         """Try OpenAI GPT-3.5"""
         if not self.has_openai:
             return None
@@ -208,7 +244,7 @@ class ContentBrain:
         except:
             return None
     
-    def _try_groq(self, content_type: str, topic: str, city: str = '') -> Optional[Dict]:
+    def _try_groq(self, content_type: str, topic: str, city: str = '') -> Optional:
         """Try Groq Llama 3.1"""
         if not self.has_groq:
             return None
@@ -255,13 +291,13 @@ class ContentBrain:
             return None
     
     def _get_seo_prompt(self, topic: str, city: str, shorter: bool = False) -> str:
-        """SEO prompt"""
+        """SEO prompt generation"""
         facts = "Voice: 60s max, Video: 30s max, Hosting: 1yr (downloadable), No app (NFC tap), Mascots: Mylo & Gigi"
         
         if shorter:
             return f"""Write SEO page for "{topic} in {city}" for SayPlay gift stickers.
 FACTS: {facts}
-OUTPUT JSON: {{"title": "...", "meta_desc": "...", "intro_html": "<p>200+ words...</p>", "problem_html": "<p>200+ words...</p>", "solution_html": "<p>250+ words...</p>", "howto_html": "<p>150+ words...</p>", "local_html": "<p>100+ words {city} shops...</p>", "faq_html": "<div class='faq-item'><h4>Q?</h4><p>Answer...</p></div>..."}}"""
+OUTPUT JSON: {{"title": "...", "meta_desc": "...", "intro_html": "<p>200+ words...</p>", "problem_html": "<p>200+ words...</p>", "solution_html": "<p>250+ words...</p>", "howto_html": "<p>150+ words...</p>", "local_html": "<p>100+ words about {city} shops...</p>", "faq_html": "<div class='faq-item'><h4>Question?</h4><p>Answer...</p></div>..."}}"""
         
         return f"""Senior SEO copywriter for SayPlay - UK NFC voice/video gift stickers.
 
@@ -272,7 +308,7 @@ Write comprehensive page: "{topic} in {city}"
 REQUIREMENTS:
 - 1500+ characters total
 - Natural UK English
-- Emotional stories
+- Emotional storytelling
 - Local {city} references
 
 STRUCTURE (FULL paragraphs, 150+ words each):
@@ -296,7 +332,7 @@ JSON OUTPUT:
 }}"""
     
     def _get_blog_prompt(self, topic: str, shorter: bool = False) -> str:
-        """Blog prompt"""
+        """Blog prompt generation"""
         facts = "Voice: 60s max, Video: 30s max, Hosting: 1yr, No app, Mascots: Mylo & Gigi"
         
         if shorter:
@@ -316,7 +352,7 @@ REQUIREMENTS:
 - UK English
 - Emotional connection
 
-STRUCTURE:
+STRUCTURE (full paragraphs):
 1. Opening story (300 words)
 2. Main content (800 words): problem, solution, benefits
 3. How-to guide (400 words)
@@ -330,7 +366,7 @@ JSON OUTPUT:
 }}"""
     
     def _get_podcast_prompt(self, topic: str, shorter: bool = False) -> str:
-        """Podcast prompt"""
+        """Podcast prompt generation"""
         facts = "Voice: 60s, Video: 30s, Hosting: 1yr, No app, Mascots: Mylo & Gigi"
         
         if shorter:
@@ -346,68 +382,26 @@ Topic: "{topic}"
 
 REQUIREMENTS:
 - 700+ words (5+ minutes spoken)
-- Host: Sonia (UK, warm)
-- Conversational
-- Emotional story
-- Explain features
+- Host: Sonia (UK, warm tone)
+- Conversational, natural
+- Include emotional story
+- Explain features clearly
 
 STRUCTURE:
 1. Welcome (80 words)
 2. Topic intro + story (200 words)
-3. Problem (150 words)
-4. SayPlay solution (250 words)
-5. Example (120 words)
+3. Problem discussion (150 words)
+4. SayPlay solution (250 words): features, Mylo & Gigi
+5. Example use case (120 words)
 6. CTA (50 words): sayplay.co.uk
 
 OUTPUT: Spoken script only, no markdown, no stage directions"""
     
-    def generate_blog(self, topic: str) -> Dict:
-        """Generate blog with 6-tier cascade"""
-        
-        print(f"      📝 Blog: {topic}")
-        
-        # Try all AI tiers
-        for tier, method in [
-            ('Gemini 1.5 Pro', lambda: self._try_gemini_model(AIConfig.GEMINI_PRO, 'blog', topic)),
-            ('Gemini 1.5 Flash', lambda: self._try_gemini_model(AIConfig.GEMINI_FLASH, 'blog', topic)),
-            ('Gemini 1.0 Pro', lambda: self._try_gemini_model(AIConfig.GEMINI_PRO_OLD, 'blog', topic)),
-            ('OpenAI GPT-3.5', lambda: self._try_openai('blog', topic)),
-            ('Groq Llama 3.1', lambda: self._try_groq('blog', topic))
-        ]:
-            result = method()
-            if result:
-                print(f"         ✅ {tier}")
-                return result
-        
-        print(f"         🚨 ALL AI FAILED - Emergency")
-        return self._emergency_blog(topic)
-    
-    def generate_podcast_script(self, topic: str) -> str:
-        """Generate podcast with 6-tier cascade"""
-        
-        print(f"      🎙️ Podcast: {topic}")
-        
-        # Try all AI tiers
-        for tier, method in [
-            ('Gemini 1.5 Pro', lambda: self._try_gemini_model(AIConfig.GEMINI_PRO, 'podcast', topic)),
-            ('Gemini 1.5 Flash', lambda: self._try_gemini_model(AIConfig.GEMINI_FLASH, 'podcast', topic)),
-            ('Gemini 1.0 Pro', lambda: self._try_gemini_model(AIConfig.GEMINI_PRO_OLD, 'podcast', topic)),
-            ('OpenAI GPT-3.5', lambda: self._try_openai('podcast', topic)),
-            ('Groq Llama 3.1', lambda: self._try_groq('podcast', topic))
-        ]:
-            result = method()
-            if result:
-                print(f"         ✅ {tier}")
-                return result
-        
-        print(f"         🚨 ALL AI FAILED - Emergency")
-        return self._emergency_podcast(topic)
-    
     def _emergency_seo(self, topic: str, city: str) -> Dict:
-        """Emergency SEO template"""
+        """Emergency SEO template (Tier 6 - 100% reliable)"""
         return {
             'title': f'Perfect {topic} in {city} | SayPlay UK',
-            'meta_desc': f'Looking for {topic} in {city}? Add your voice or video message to any gift with SayPlay NFC stickers. No app needed - just tap!',
+            'meta_desc': f'Looking for {topic} in {city}? Add voice/video messages to gifts with SayPlay NFC stickers. No app needed - just tap!',
             'intro_html': f'''
                 <p>Finding the perfect {topic.lower()} in <strong>{city}</strong> can be challenging. Traditional gifts often feel impersonal and forgettable. Whether you're celebrating a birthday, anniversary, graduation, or any special occasion, you want your gift to stand out and create lasting memories.</p>
                 <p>That's where SayPlay comes in. We've created a revolutionary way to add a personal touch to any gift you choose. Imagine attaching your voice or a video message directly to a gift - a message that lasts forever and can be played simply by tapping a phone. No apps, no downloads, no complications. Just pure emotion and connection.</p>
@@ -455,7 +449,7 @@ OUTPUT: Spoken script only, no markdown, no stage directions"""
         }
     
     def _emergency_blog(self, topic: str) -> Dict:
-        """Emergency blog template"""
+        """Emergency blog template (Tier 6 - 100% reliable)"""
         return {
             'title': f'{topic}: A Guide to Meaningful Gift-Giving',
             'article_html': f'''
@@ -495,11 +489,11 @@ OUTPUT: Spoken script only, no markdown, no stage directions"""
                 
                 <p>Don't let another special occasion pass with a gift that gets forgotten. Add your voice, add your presence, add meaning. That's what SayPlay is all about.</p>
             ''',
-            'keywords': ['gifts', 'personalized', 'voice message', 'UK']
+            'keywords': ['gifts', 'personalized', 'voice message', 'UK', 'SayPlay']
         }
     
     def _emergency_podcast(self, topic: str) -> str:
-        """Emergency podcast template"""
+        """Emergency podcast template (Tier 6 - 100% reliable)"""
         return f"""Welcome to the SayPlay Gift Guide podcast. I'm Sonia, and today we're talking about {topic.lower()}.
 
 You know that feeling when you're shopping for a gift and nothing feels quite right? You walk through shop after shop, looking at options, but everything seems so... generic. A bottle of wine, a box of chocolates, another candle. They're nice, but they're forgettable.
@@ -523,11 +517,8 @@ Let me share a quick example. Last month, a grandmother used SayPlay to send bir
 Whether you're celebrating {topic.lower()} or any special occasion, SayPlay helps you create moments that last. Visit sayplay dot co dot uk to get started. Make your next gift unforgettable. Thanks for listening to the SayPlay Gift Guide."""
 
 
-# Rest of the code (DesignEngine, AudioStudio, TrendHunter, main) stays the same as V5...
-# Just copy from the previous version
-
 class DesignEngine:
-    """Premium design templates - same as V5"""
+    """Premium design templates"""
     
     def __init__(self):
         if not JINJA2_AVAILABLE:
@@ -654,7 +645,8 @@ class DesignEngine:
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(html)
             print(f"      ✅ SEO: {output_path.name}")
-        except:
+        except Exception as e:
+            print(f"      ⚠️ Template error: {str(e)[:50]}")
             self._build_fallback(content, output_path)
     
     def build_blog_page(self, content: Dict, output_path: Path):
@@ -667,7 +659,8 @@ class DesignEngine:
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(html)
             print(f"      ✅ Blog: {output_path.name}")
-        except:
+        except Exception as e:
+            print(f"      ⚠️ Template error: {str(e)[:50]}")
             self._build_fallback(content, output_path)
     
     def _build_fallback(self, content: Dict, output_path: Path):
@@ -680,7 +673,7 @@ class DesignEngine:
 
 
 class AudioStudio:
-    """Same as V5"""
+    """Podcast generator with intro/outro"""
     
     def __init__(self):
         self.intro_paths = [
@@ -707,8 +700,9 @@ class AudioStudio:
                 print(f"✅ Outro: {path}")
                 break
     
-    async def generate_podcast(self, script: str, episode_num: int, slug: str, output_dir: Path) -> Path:
+    async def generate_podcast(self, script: str, episode_num: int, slug: str, output_dir: Path) -> Optional[Path]:
         if not EDGE_TTS_AVAILABLE:
+            print("      ⚠️ Edge TTS not available")
             return None
         
         if not script or len(script) < 50:
@@ -721,7 +715,8 @@ class AudioStudio:
         try:
             communicate = edge_tts.Communicate(script, "en-GB-SoniaNeural")
             await communicate.save(str(temp_body))
-        except:
+        except Exception as e:
+            print(f"         ❌ TTS failed: {str(e)[:50]}")
             return None
         
         filename = f"sayplay_ep_{episode_num:03d}_{slug}.mp3"
@@ -746,12 +741,12 @@ class AudioStudio:
 
 
 class TrendHunter:
-    """Same as V5"""
+    """Reddit topic hunter"""
     
     SUBREDDITS = ['GiftIdeas', 'weddingplanning', 'relationship_advice']
     
-    def get_topics(self, limit: int = 10) -> List[Dict]:
-        print(f"📡 Reddit...")
+    def get_topics(self, limit: int = 15) -> List[Dict]:
+        print(f"📡 Scanning Reddit...")
         
         trends = []
         headers = {'User-Agent': 'SayPlayBot/1.0'}
@@ -788,27 +783,37 @@ class TrendHunter:
                 {'title': 'Baby Shower Ideas', 'score': 650},
                 {'title': 'Retirement Gifts', 'score': 600},
                 {'title': 'Christmas Fillers UK', 'score': 550},
-                {'title': 'Valentines Guide', 'score': 500}
+                {'title': 'Valentines Guide', 'score': 500},
+                {'title': 'Easter Gift Baskets', 'score': 450},
+                {'title': 'New Baby Presents', 'score': 400},
+                {'title': 'Housewarming Gifts', 'score': 350},
+                {'title': 'Teacher Appreciation', 'score': 300},
+                {'title': 'Thank You Gifts', 'score': 250}
             ]
         
         selected = trends[:limit]
-        print(f"   ✅ {len(selected)} topics")
+        print(f"   ✅ {len(selected)} topics found")
         return selected
 
 
 async def main():
     print("\n" + "="*70)
-    print("TITAN V6 ULTIMATE CASCADE - 6 AI TIERS")
+    print("TITAN V7 PERSISTENT - Dashboard + Metadata + 6-Tier Cascade")
     print("="*70 + "\n")
     
     start_time = datetime.now()
     timestamp = datetime.now().strftime('%Y-%m-%d_%H%M')
-    output_dir = Path(f'TITAN_OUTPUT_V6_{timestamp}')
+    output_dir = Path(f'TITAN_OUTPUT_V7_{timestamp}')
     output_dir.mkdir(exist_ok=True)
     
     web_dir = output_dir / 'web'
-    for d in ['blog', 'podcasts', 'seo']:
+    for d in ['blog', 'podcasts', 'seo', 'assets']:
         (web_dir / d).mkdir(parents=True, exist_ok=True)
+    
+    # Initialize managers
+    history_file = Path('content_history.json')
+    metadata = ContentMetadataManager(history_file)
+    dashboard_gen = DashboardIndexGenerator()
     
     gemini_key = os.getenv('GEMINI_API_KEY')
     
@@ -821,75 +826,155 @@ async def main():
               'Glasgow', 'Edinburgh', 'Bristol', 'Cardiff', 'Sheffield']
     
     print(f"\n{'='*70}")
-    print("PHASE 1: TOPICS")
+    print("PHASE 1: TOPIC HUNTING")
     print(f"{'='*70}")
     
-    topics = hunter.get_topics(limit=10)
+    topics = hunter.get_topics(limit=15)
     
+    # PHASE 2: SEO PAGES
     print(f"\n{'='*70}")
-    print("PHASE 2: SEO (10 pages, 6-tier cascade)")
+    print("PHASE 2: SEO PAGES (with duplicate check)")
     print(f"{'='*70}")
     
     seo_count = 0
-    for i, topic in enumerate(topics[:10], 1):
+    for i, topic in enumerate(topics, 1):
         city = random.choice(cities)
-        print(f"\n📌 SEO {i}/10: {topic['title'][:40]}... {city}")
+        
+        if metadata.is_duplicate_seo(topic['title'], city):
+            print(f"\n⏭️  SEO {i}: {topic['title'][:40]} in {city} - DUPLICATE, skipping")
+            continue
+        
+        print(f"\n📌 SEO {seo_count + 1}: {topic['title'][:40]}... in {city}")
         
         content = brain.generate_seo_page(topic['title'], city)
         
         slug = topic['title'].lower().replace(' ', '-')[:40]
         slug = ''.join(c for c in slug if c.isalnum() or c == '-')
+        filename = f'{slug}-{city.lower()}.html'
         
-        page_path = web_dir / 'seo' / f'{slug}-{city.lower()}.html'
+        page_path = web_dir / 'seo' / filename
         design.build_seo_page(content, page_path)
         
+        metadata.add_seo_page(
+            topic=topic['title'],
+            city=city,
+            filename=filename,
+            title=content.get('title', topic['title'])
+        )
+        
         seo_count += 1
+        
+        if seo_count >= 10:
+            break
     
+    # PHASE 3: BLOG POSTS
     print(f"\n{'='*70}")
-    print("PHASE 3: BLOG (10 posts, 6-tier cascade)")
+    print("PHASE 3: BLOG POSTS (with duplicate check)")
     print(f"{'='*70}")
     
     blog_count = 0
-    for i, topic in enumerate(topics[:10], 1):
-        print(f"\n📝 Blog {i}/10: {topic['title'][:40]}...")
+    for i, topic in enumerate(topics, 1):
+        if metadata.is_duplicate_blog(topic['title']):
+            print(f"\n⏭️  Blog {i}: {topic['title'][:40]} - DUPLICATE, skipping")
+            continue
+        
+        print(f"\n📝 Blog {blog_count + 1}: {topic['title'][:40]}...")
         
         content = brain.generate_blog(topic['title'])
         
         slug = topic['title'].lower().replace(' ', '-')[:40]
         slug = ''.join(c for c in slug if c.isalnum() or c == '-')
+        filename = f'{slug}.html'
         
-        page_path = web_dir / 'blog' / f'{slug}.html'
+        page_path = web_dir / 'blog' / filename
         design.build_blog_page(content, page_path)
         
+        metadata.add_blog_post(
+            topic=topic['title'],
+            filename=filename,
+            title=content.get('title', topic['title'])
+        )
+        
         blog_count += 1
+        
+        if blog_count >= 10:
+            break
     
+    # PHASE 4: PODCASTS
     print(f"\n{'='*70}")
-    print("PHASE 4: PODCASTS (10 eps, 6-tier cascade)")
+    print("PHASE 4: PODCASTS (with duplicate check + episode numbering)")
     print(f"{'='*70}")
     
     podcast_count = 0
-    for i, topic in enumerate(topics[:10], 1):
-        print(f"\n🎙️ Podcast {i}/10: {topic['title'][:40]}...")
+    for i, topic in enumerate(topics, 1):
+        if metadata.is_duplicate_podcast(topic['title']):
+            print(f"\n⏭️  Podcast {i}: {topic['title'][:40]} - DUPLICATE, skipping")
+            continue
+        
+        episode_num = metadata.get_next_episode_number()
+        
+        print(f"\n🎙️  Podcast {podcast_count + 1} (Episode #{episode_num}): {topic['title'][:40]}...")
         
         script = brain.generate_podcast_script(topic['title'])
         
         slug = topic['title'].lower().replace(' ', '-')[:30]
         slug = ''.join(c for c in slug if c.isalnum() or c == '-')
+        filename = f'sayplay_ep_{episode_num:03d}_{slug}.mp3'
         
-        await audio.generate_podcast(script, i, slug, web_dir / 'podcasts')
+        await audio.generate_podcast(script, episode_num, slug, web_dir / 'podcasts')
+        
+        metadata.add_podcast(
+            topic=topic['title'],
+            filename=filename,
+            episode_num=episode_num
+        )
         
         podcast_count += 1
+        
+        if podcast_count >= 10:
+            break
+    
+    # PHASE 5: SAVE METADATA
+    print(f"\n{'='*70}")
+    print("PHASE 5: SAVING METADATA")
+    print(f"{'='*70}")
+    
+    metadata.save()
+    
+    # Copy history to output
+    shutil.copy(history_file, web_dir / 'assets' / 'content_history.json')
+    print(f"   ✅ Metadata copied to output")
+    
+    # PHASE 6: GENERATE DASHBOARDS
+    print(f"\n{'='*70}")
+    print("PHASE 6: GENERATING DASHBOARD INDEXES")
+    print(f"{'='*70}")
+    
+    stats = metadata.get_stats()
+    
+    dashboard_gen.generate_main_dashboard(web_dir / 'index.html', stats)
+    dashboard_gen.generate_seo_index(web_dir / 'seo' / 'index.html', metadata.get_all_seo_pages())
+    dashboard_gen.generate_blog_index(web_dir / 'blog' / 'index.html', metadata.get_all_blog_posts())
+    dashboard_gen.generate_podcast_index(web_dir / 'podcasts' / 'index.html', metadata.get_all_podcasts())
     
     duration = (datetime.now() - start_time).total_seconds()
     
     print(f"\n{'='*70}")
-    print("TITAN V6 ULTIMATE COMPLETE!")
+    print("TITAN V7 PERSISTENT COMPLETE!")
     print(f"{'='*70}")
-    print(f"✅ {seo_count} SEO pages")
-    print(f"✅ {blog_count} Blog posts")
-    print(f"✅ {podcast_count} Podcasts")
-    print(f"✅ 6-Tier Cascade: UNBREAKABLE")
-    print(f"\n⏱ {int(duration // 60)}m {int(duration % 60)}s")
+    print(f"✅ {seo_count} SEO pages (new this run)")
+    print(f"✅ {blog_count} Blog posts (new this run)")
+    print(f"✅ {podcast_count} Podcasts (new this run)")
+    print(f"")
+    print(f"📊 TOTAL CONTENT IN SYSTEM:")
+    print(f"   • Total SEO pages: {stats['total_seo']}")
+    print(f"   • Total Blog posts: {stats['total_blog']}")
+    print(f"   • Total Podcasts: {stats['total_podcasts']}")
+    print(f"   • Latest Episode: #{stats['last_episode']}")
+    print(f"")
+    print(f"✅ Dashboard generated with all indexes")
+    print(f"✅ 6-Tier AI Cascade: UNBREAKABLE")
+    print(f"\n⏱  Duration: {int(duration // 60)}m {int(duration % 60)}s")
     print(f"{'='*70}\n")
     
     return 0
