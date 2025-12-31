@@ -36,108 +36,93 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          echo "✅ System dependencies installed"
+          sudo apt-get install -y ffmpeg jq
+          echo "System dependencies installed"
       
       - name: Install Python packages
         run: |
           pip install --upgrade pip
           pip install google-generativeai edge-tts jinja2 requests pillow
-          echo "✅ Python packages installed"
+          echo "Python packages installed"
       
       - name: Verify Python modules
         run: |
-          python -c "import google.generativeai; print('✅ Gemini OK')"
-          python -c "import edge_tts; print('✅ Edge TTS OK')"
-          python -c "import jinja2; print('✅ Jinja2 OK')"
-          python -c "import requests; print('✅ Requests OK')"
+          python -c "import google.generativeai; print('Gemini OK')"
+          python -c "import edge_tts; print('Edge TTS OK')"
+          python -c "import jinja2; print('Jinja2 OK')"
+          python -c "import requests; print('Requests OK')"
       
       - name: Prepare runtime assets
         run: |
           mkdir -p runtime_assets
-          echo "📁 Runtime assets directory created"
           
           if [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ]; then
             cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/
-            echo "✅ Intro music copied"
-          else
-            echo "⚠️ Intro music not found"
+            echo "Intro music copied"
           fi
           
           if [ -f "assets/music/Just tap.no app final podkast.mp3" ]; then
             cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/
-            echo "✅ Outro music copied"
-          else
-            echo "⚠️ Outro music not found"
+            echo "Outro music copied"
           fi
           
           if [ -f "assets/brand/sayplay_logo.png" ]; then
             cp "assets/brand/sayplay_logo.png" runtime_assets/
-            echo "✅ Logo copied"
-          else
-            echo "⚠️ Logo not found"
+            echo "Logo copied"
           fi
           
           if [ -f "assets/brand/milo&gigi-razem-z-logo-sayplay.png" ]; then
             cp "assets/brand/milo&gigi-razem-z-logo-sayplay.png" runtime_assets/milo-gigi.png
-            echo "✅ Mascots copied"
-          else
-            echo "⚠️ Mascots not found"
+            echo "Mascots copied"
           fi
           
-          echo ""
-          echo "📊 Runtime assets summary:"
-          ls -lh runtime_assets/ 2>/dev/null || echo "No files copied"
+          ls -lh runtime_assets/ 2>/dev/null || echo "No assets copied"
       
       - name: Initialize content history
         run: |
           if [ ! -f "content_history.json" ]; then
             echo '{"seo_pages":[],"blog_posts":[],"podcasts":[],"last_episode_number":0,"last_updated":null}' > content_history.json
-            echo "📄 Created new content_history.json"
+            echo "Created new content_history.json"
           else
-            echo "📖 Existing content_history.json found"
+            echo "Existing content_history.json found"
           fi
       
       - name: Generate content
         run: |
-          echo ""
-          echo "🚀 Starting TITAN V7 PERSISTENT..."
-          echo ""
+          echo "Starting TITAN V7 PERSISTENT..."
           python titan_master_orchestrator_v7_persistent.py
         continue-on-error: false
       
       - name: Verify generated output
         run: |
-          echo ""
-          echo "🔍 Verifying generated content..."
-          echo ""
+          echo "Verifying generated content..."
           
           LATEST=$(ls -dt TITAN_OUTPUT_V7_* 2>/dev/null | head -1)
           
           if [ -z "$LATEST" ]; then
-            echo "❌ No output directory found!"
+            echo "ERROR: No output directory found"
             exit 1
           fi
           
-          echo "📁 Latest output: $LATEST"
+          echo "Latest output: $LATEST"
           
           SEO_COUNT=$(find "$LATEST/web/seo" -name '*.html' -not -name 'index.html' 2>/dev/null | wc -l)
           BLOG_COUNT=$(find "$LATEST/web/blog" -name '*.html' -not -name 'index.html' 2>/dev/null | wc -l)
           PODCAST_COUNT=$(find "$LATEST/web/podcasts" -name '*.mp3' 2>/dev/null | wc -l)
           
-          echo "📊 Generated: SEO=$SEO_COUNT Blog=$BLOG_COUNT Podcasts=$PODCAST_COUNT"
+          echo "Generated: SEO=$SEO_COUNT Blog=$BLOG_COUNT Podcasts=$PODCAST_COUNT"
           
           if [ "$SEO_COUNT" -lt 1 ] || [ "$BLOG_COUNT" -lt 1 ] || [ "$PODCAST_COUNT" -lt 1 ]; then
-            echo "❌ Insufficient content generated"
+            echo "ERROR: Insufficient content generated"
             exit 1
           fi
           
           if [ ! -f "$LATEST/web/index.html" ]; then
-            echo "❌ Main dashboard missing"
+            echo "ERROR: Main dashboard missing"
             exit 1
           fi
           
-          echo "✅ All verification checks passed"
+          echo "All verification checks passed"
       
       - name: Commit metadata
         run: |
@@ -152,7 +137,7 @@ jobs:
           LATEST=$(ls -dt TITAN_OUTPUT_V7_* | head -1)
           mkdir -p deploy
           cp -r "$LATEST/web"/* deploy/
-          echo "✅ Deployment package ready"
+          echo "Deployment package ready"
       
       - name: Deploy to Vercel
         run: |
@@ -161,7 +146,7 @@ jobs:
           vercel pull --yes --environment=production --token=$VERCEL_TOKEN
           vercel build --prod --token=$VERCEL_TOKEN
           vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
-          echo "✅ Deployed to Vercel"
+          echo "Deployed to Vercel"
       
       - name: Success notification
         if: success()
@@ -172,27 +157,23 @@ jobs:
           NEW_BLOG=$(find "$LATEST/web/blog" -name '*.html' -not -name 'index.html' 2>/dev/null | wc -l)
           NEW_PODCAST=$(find "$LATEST/web/podcasts" -name '*.mp3' 2>/dev/null | wc -l)
           
-          python3 -c "
-import json
-try:
-    with open('content_history.json', 'r') as f:
-        data = json.load(f)
-        total_seo = len(data.get('seo_pages', []))
-        total_blog = len(data.get('blog_posts', []))
-        total_podcast = len(data.get('podcasts', []))
-        last_ep = data.get('last_episode_number', 0)
-        print(f'{total_seo},{total_blog},{total_podcast},{last_ep}')
-except:
-    print('0,0,0,0')
-" > stats.txt
+          if [ -f "content_history.json" ]; then
+            TOTAL_SEO=$(jq '.seo_pages | length' content_history.json 2>/dev/null || echo "0")
+            TOTAL_BLOG=$(jq '.blog_posts | length' content_history.json 2>/dev/null || echo "0")
+            TOTAL_PODCAST=$(jq '.podcasts | length' content_history.json 2>/dev/null || echo "0")
+            LAST_EP=$(jq '.last_episode_number' content_history.json 2>/dev/null || echo "0")
+          else
+            TOTAL_SEO=0
+            TOTAL_BLOG=0
+            TOTAL_PODCAST=0
+            LAST_EP=0
+          fi
           
-          read TOTAL_SEO TOTAL_BLOG TOTAL_PODCAST LAST_EP < <(cat stats.txt | tr ',' ' ')
-          
-          MESSAGE="✅ TITAN V7 SUCCESS!%0A%0A"
-          MESSAGE="${MESSAGE}🆕 New: ${NEW_SEO} SEO, ${NEW_BLOG} Blog, ${NEW_PODCAST} Podcasts%0A"
-          MESSAGE="${MESSAGE}📊 Total: ${TOTAL_SEO} SEO, ${TOTAL_BLOG} Blog, ${TOTAL_PODCAST} Podcasts%0A"
-          MESSAGE="${MESSAGE}🎙️ Episode: #${LAST_EP}%0A%0A"
-          MESSAGE="${MESSAGE}🔗 dashboard.sayplay.co.uk"
+          MESSAGE="TITAN V7 SUCCESS!%0A%0A"
+          MESSAGE="${MESSAGE}New: ${NEW_SEO} SEO, ${NEW_BLOG} Blog, ${NEW_PODCAST} Podcasts%0A"
+          MESSAGE="${MESSAGE}Total: ${TOTAL_SEO} SEO, ${TOTAL_BLOG} Blog, ${TOTAL_PODCAST} Podcasts%0A"
+          MESSAGE="${MESSAGE}Episode: ${LAST_EP}%0A%0A"
+          MESSAGE="${MESSAGE}dashboard.sayplay.co.uk"
           
           if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
             curl -s -X POST \
@@ -204,7 +185,7 @@ except:
       - name: Failure notification
         if: failure()
         run: |
-          MESSAGE="❌ TITAN V7 FAILED!%0A%0ACheck: github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MESSAGE="TITAN V7 FAILED!%0A%0ACheck logs at:%0Agithub.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
           if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
             curl -s -X POST \
@@ -217,4 +198,4 @@ except:
         if: always()
         run: |
           ls -dt TITAN_OUTPUT_V7_* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true
-          echo "✅ Cleanup complete"
+          echo "Cleanup complete"
