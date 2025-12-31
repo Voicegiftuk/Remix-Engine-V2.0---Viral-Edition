@@ -2,8 +2,8 @@ name: Titan V5 CASCADE
 
 on:
   schedule:
-    - cron: '0 10 * * *'
-  workflow_dispatch:
+    - cron: '0 10 * * *'  # Codziennie 10:00 UTC
+  workflow_dispatch:  # Ręczne uruchomienie
 
 env:
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -20,66 +20,207 @@ jobs:
     timeout-minutes: 90
     
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Setup Python
+      - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
+          echo "✅ System dependencies installed"
+      
+      - name: Install Python packages
+        run: |
           pip install --upgrade pip
           pip install google-generativeai edge-tts jinja2 requests pillow
+          echo "✅ Python packages installed"
       
-      - name: Prepare assets
+      - name: Prepare runtime assets
         run: |
           mkdir -p runtime_assets
+          echo "📁 Preparing assets..."
           
-          # Audio (CORRECT PATHS)
-          [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ] && cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/ && echo "✅ Intro"
-          [ -f "assets/music/Just tap.no app final podkast.mp3" ] && cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/ && echo "✅ Outro"
+          # Audio files (CORRECT PATHS - no Voicegiftuk)
+          if [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ]; then
+            cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/
+            echo "  ✅ Intro audio: assets/music/"
+          else
+            echo "  ⚠️ Intro audio NOT FOUND"
+          fi
           
-          # Images (CORRECT PATHS - no Voicegiftuk)
-          [ -f "assets/brand/sayplay_logo.png" ] && cp "assets/brand/sayplay_logo.png" runtime_assets/ && echo "✅ Logo"
-          [ -f "assets/brand/milo&gigi-razem-z-logo-sayplay.png" ] && cp "assets/brand/milo&gigi-razem-z-logo-sayplay.png" runtime_assets/milo-gigi.png && echo "✅ Mascots"
+          if [ -f "assets/music/Just tap.no app final podkast.mp3" ]; then
+            cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/
+            echo "  ✅ Outro audio: assets/music/"
+          else
+            echo "  ⚠️ Outro audio NOT FOUND"
+          fi
           
+          # Logo (CORRECT PATH - no Voicegiftuk subfolder)
+          if [ -f "assets/brand/sayplay_logo.png" ]; then
+            cp "assets/brand/sayplay_logo.png" runtime_assets/
+            echo "  ✅ Logo: assets/brand/sayplay_logo.png"
+          else
+            echo "  ⚠️ Logo NOT FOUND at assets/brand/sayplay_logo.png"
+            ls -la assets/brand/ || true
+          fi
+          
+          # Mascots (CORRECT PATH - no Voicegiftuk subfolder)
+          if [ -f "assets/brand/milo&gigi-razem-z-logo-sayplay.png" ]; then
+            cp "assets/brand/milo&gigi-razem-z-logo-sayplay.png" runtime_assets/milo-gigi.png
+            echo "  ✅ Mascots (with logo): assets/brand/"
+          elif [ -f "assets/brand/milo&gigi razem no backround.png" ]; then
+            cp "assets/brand/milo&gigi razem no backround.png" runtime_assets/milo-gigi.png
+            echo "  ✅ Mascots (no background): assets/brand/"
+          else
+            echo "  ⚠️ Mascots NOT FOUND"
+            ls -la assets/brand/ || true
+          fi
+          
+          echo ""
+          echo "📊 Runtime assets prepared:"
           ls -lh runtime_assets/
       
-      - name: Generate content (CASCADE)
+      - name: Generate content (CASCADE MODE)
         run: |
-          echo "🚀 TITAN V5 CASCADE - Unbreakable mode..."
+          echo "🚀 TITAN V5 CASCADE - Starting content generation..."
+          echo ""
           python titan_master_orchestrator_v5_cascade.py
+          echo ""
+          echo "✅ Content generation complete"
       
-      - name: Verify content
+      - name: Verify generated content
         run: |
+          echo "🔍 Verifying generated content..."
+          
           LATEST=$(ls -dt TITAN_OUTPUT_V5_* | head -1)
+          echo "Latest output: $LATEST"
           
-          SEO=$(find $LATEST/web/seo -name '*.html' | wc -l)
-          BLOG=$(find $LATEST/web/blog -name '*.html' | wc -l)
-          PODCAST=$(find $LATEST/web/podcasts -name '*.mp3' | wc -l)
+          SEO_COUNT=$(find $LATEST/web/seo -name '*.html' 2>/dev/null | wc -l)
+          BLOG_COUNT=$(find $LATEST/web/blog -name '*.html' 2>/dev/null | wc -l)
+          PODCAST_COUNT=$(find $LATEST/web/podcasts -name '*.mp3' 2>/dev/null | wc -l)
           
-          echo "Generated: SEO=$SEO Blog=$BLOG Podcasts=$PODCAST"
+          echo ""
+          echo "📊 Content Statistics:"
+          echo "  SEO Pages:    $SEO_COUNT"
+          echo "  Blog Posts:   $BLOG_COUNT"
+          echo "  Podcasts:     $PODCAST_COUNT"
+          echo ""
           
-          [ "$SEO" -ge 10 ] && [ "$BLOG" -ge 10 ] && [ "$PODCAST" -ge 10 ] && echo "✅ All content generated!" || exit 1
+          # Check file sizes
+          echo "📏 SEO Page Sizes:"
+          find $LATEST/web/seo -name '*.html' -exec wc -c {} \; | head -5
+          echo ""
+          
+          echo "📏 Blog Post Sizes:"
+          find $LATEST/web/blog -name '*.html' -exec wc -c {} \; | head -5
+          echo ""
+          
+          echo "📏 Podcast Sizes:"
+          find $LATEST/web/podcasts -name '*.mp3' -exec wc -c {} \; | head -5
+          echo ""
+          
+          # Validation
+          if [ "$SEO_COUNT" -ge 10 ] && [ "$BLOG_COUNT" -ge 10 ] && [ "$PODCAST_COUNT" -ge 10 ]; then
+            echo "✅ All content generated successfully!"
+          else
+            echo "❌ Content generation incomplete!"
+            echo "Expected: 10 SEO, 10 Blog, 10 Podcasts"
+            echo "Got: $SEO_COUNT SEO, $BLOG_COUNT Blog, $PODCAST_COUNT Podcasts"
+            exit 1
+          fi
       
-      - name: Deploy
+      - name: Prepare deployment package
         run: |
+          echo "📦 Preparing deployment..."
+          
           LATEST=$(ls -dt TITAN_OUTPUT_V5_* | head -1)
           mkdir -p deploy
+          
+          # Copy all web content
           cp -r $LATEST/web/* deploy/
           
-          npm install --global vercel@latest
-          cd deploy
-          vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-          vercel build --prod --token=$VERCEL_TOKEN
-          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+          echo "✅ Deployment package ready"
+          ls -lh deploy/
       
-      - name: Success notification
+      - name: Deploy to Vercel
+        run: |
+          echo "🚀 Deploying to Vercel..."
+          
+          npm install --global vercel@latest
+          
+          cd deploy
+          
+          # Pull Vercel environment
+          vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+          
+          # Build for production
+          vercel build --prod --token=$VERCEL_TOKEN
+          
+          # Deploy to production
+          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN)
+          
+          echo "✅ Deployed to: $DEPLOY_URL"
+          echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
+      
+      - name: Send success notification
         if: success()
         run: |
-          MESSAGE="✅ TITAN V5 CASCADE Complete!%0A10 SEO + 10 Blog + 10 Podcasts%0ASystem: UNBREAKABLE%0A🔗 dashboard.sayplay.co.uk"
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=${TELEGRAM_CHAT_ID}" -d "text=${MESSAGE}" || true
+          LATEST=$(ls -dt TITAN_OUTPUT_V5_* | head -1)
+          SEO_COUNT=$(find $LATEST/web/seo -name '*.html' 2>/dev/null | wc -l)
+          BLOG_COUNT=$(find $LATEST/web/blog -name '*.html' 2>/dev/null | wc -l)
+          PODCAST_COUNT=$(find $LATEST/web/podcasts -name '*.mp3' 2>/dev/null | wc -l)
+          
+          MESSAGE="✅ TITAN V5 CASCADE Complete!%0A%0A"
+          MESSAGE="${MESSAGE}📊 Generated:%0A"
+          MESSAGE="${MESSAGE}• ${SEO_COUNT} SEO pages%0A"
+          MESSAGE="${MESSAGE}• ${BLOG_COUNT} Blog posts%0A"
+          MESSAGE="${MESSAGE}• ${PODCAST_COUNT} Podcasts%0A%0A"
+          MESSAGE="${MESSAGE}🔧 System: 3-Tier AI Cascade%0A"
+          MESSAGE="${MESSAGE}✨ Facts: 60s voice, 30s video, 1yr hosting%0A%0A"
+          MESSAGE="${MESSAGE}🔗 dashboard.sayplay.co.uk"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=HTML" || true
+          
+          echo "✅ Success notification sent"
+      
+      - name: Send failure notification
+        if: failure()
+        run: |
+          MESSAGE="❌ TITAN V5 CASCADE Failed!%0A%0A"
+          MESSAGE="${MESSAGE}Please check GitHub Actions logs%0A"
+          MESSAGE="${MESSAGE}🔗 github.com/${{ github.repository }}/actions"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" || true
+          
+          echo "❌ Failure notification sent"
+      
+      - name: Upload artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: titan-v5-debug-logs
+          path: |
+            TITAN_OUTPUT_V5_*/
+            runtime_assets/
+          retention-days: 7
+      
+      - name: Cleanup old outputs
+        if: always()
+        run: |
+          echo "🧹 Cleaning up..."
+          
+          # Keep only the 3 most recent outputs
+          ls -dt TITAN_OUTPUT_V5_* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true
+          
+          echo "✅ Cleanup complete"
