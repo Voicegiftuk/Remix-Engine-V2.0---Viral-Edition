@@ -1,0 +1,288 @@
+name: Titan V7 PERSISTENT
+
+on:
+  schedule:
+    - cron: '0 10 * * *'  # Codziennie o 10:00 UTC
+  workflow_dispatch:      # Ręczne uruchomienie
+
+env:
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+jobs:
+  generate-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Potrzebne do commitowania zmian
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      
+      - name: Install Python packages
+        run: |
+          pip install --upgrade pip
+          pip install google-generativeai edge-tts jinja2 requests pillow
+      
+      - name: Prepare runtime assets
+        run: |
+          echo "📦 Preparing audio and image assets..."
+          mkdir -p runtime_assets
+          
+          # Audio files (intro/outro)
+          if [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ]; then
+            cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/
+            echo "✅ Intro audio copied ($(du -h "assets/music/Just tap.No app intro podkast sayplay.mp3" | cut -f1))"
+          else
+            echo "⚠️ Intro audio not found"
+          fi
+          
+          if [ -f "assets/music/Just tap.no app final podkast.mp3" ]; then
+            cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/
+            echo "✅ Outro audio copied ($(du -h "assets/music/Just tap.no app final podkast.mp3" | cut -f1))"
+          else
+            echo "⚠️ Outro audio not found"
+          fi
+          
+          # Logo
+          if [ -f "assets/brand/sayplay_logo.png" ]; then
+            cp "assets/brand/sayplay_logo.png" runtime_assets/
+            echo "✅ Logo copied"
+          fi
+          
+          # Mascots
+          if [ -f "assets/brand/milo&gigi-razem-z-logo-sayplay.png" ]; then
+            cp "assets/brand/milo&gigi-razem-z-logo-sayplay.png" runtime_assets/milo-gigi.png
+            echo "✅ Mascots copied"
+          fi
+          
+          echo "📦 Assets prepared"
+      
+      - name: Generate content (TITAN V7 PERSISTENT)
+        run: |
+          echo "🚀 Starting TITAN V7 PERSISTENT..."
+          python titan_master_orchestrator_v7_persistent.py
+          echo "✅ Content generation complete"
+      
+      - name: Commit metadata to repository
+        run: |
+          echo "💾 Committing content history..."
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "GitHub Actions Bot"
+          
+          # Add content history file
+          git add content_history.json
+          
+          # Commit only if there are changes
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "📝 No changes in content_history.json"
+          else
+            git commit -m "Update content history [skip ci]"
+            git push
+            echo "✅ Metadata committed and pushed"
+          fi
+      
+      - name: Verify generated content
+        run: |
+          echo "🔍 Verifying generated content..."
+          
+          # Find latest output directory
+          LATEST=$(ls -dt TITAN_OUTPUT_V7_* 2>/dev/null | head -1)
+          
+          if [ -z "$LATEST" ]; then
+            echo "❌ No output directory found!"
+            exit 1
+          fi
+          
+          echo "📁 Checking: $LATEST"
+          
+          # Count files (excluding index.html files)
+          SEO_COUNT=$(find "$LATEST/web/seo" -name '*.html' -not -name 'index.html' 2>/dev/null | wc -l)
+          BLOG_COUNT=$(find "$LATEST/web/blog" -name '*.html' -not -name 'index.html' 2>/dev/null | wc -l)
+          PODCAST_COUNT=$(find "$LATEST/web/podcasts" -name '*.mp3' 2>/dev/null | wc -l)
+          
+          echo "📊 Content generated:"
+          echo "   • SEO pages: $SEO_COUNT"
+          echo "   • Blog posts: $BLOG_COUNT"
+          echo "   • Podcasts: $PODCAST_COUNT"
+          
+          # Verify dashboard files
+          if [ ! -f "$LATEST/web/index.html" ]; then
+            echo "❌ Main dashboard not found!"
+            exit 1
+          fi
+          
+          if [ ! -f "$LATEST/web/seo/index.html" ]; then
+            echo "❌ SEO index not found!"
+            exit 1
+          fi
+          
+          if [ ! -f "$LATEST/web/blog/index.html" ]; then
+            echo "❌ Blog index not found!"
+            exit 1
+          fi
+          
+          if [ ! -f "$LATEST/web/podcasts/index.html" ]; then
+            echo "❌ Podcast index not found!"
+            exit 1
+          fi
+          
+          echo "✅ All dashboards generated"
+          
+          # Require at least 1 of each type
+          if [ "$SEO_COUNT" -lt 1 ] || [ "$BLOG_COUNT" -lt 1 ] || [ "$PODCAST_COUNT" -lt 1 ]; then
+            echo "❌ Minimum content not generated!"
+            echo "   Expected: At least 1 SEO, 1 Blog, 1 Podcast"
+            echo "   Got: $SEO_COUNT SEO, $BLOG_COUNT Blog, $PODCAST_COUNT Podcasts"
+            exit 1
+          fi
+          
+          echo "✅ Content verification passed"
+      
+      - name: Prepare deployment package
+        run: |
+          echo "📦 Preparing deployment..."
+          
+          LATEST=$(ls -dt TITAN_OUTPUT_V7_* | head -1)
+          
+          mkdir -p deploy
+          cp -r "$LATEST/web/"* deploy/
+          
+          echo "📂 Deploy directory contents:"
+          ls -lah deploy/
+          
+          # Verify critical files
+          if [ ! -f "deploy/index.html" ]; then
+            echo "❌ Main index.html missing!"
+            exit 1
+          fi
+          
+          echo "✅ Deployment package ready"
+      
+      - name: Install Vercel CLI
+        run: |
+          npm install --global vercel@latest
+          echo "✅ Vercel CLI installed"
+      
+      - name: Deploy to Vercel
+        run: |
+          echo "🚀 Deploying to Vercel..."
+          cd deploy
+          
+          # Pull Vercel configuration
+          vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+          
+          # Build
+          vercel build --prod --token=$VERCEL_TOKEN
+          
+          # Deploy
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN)
+          
+          echo "✅ Deployed to: $DEPLOYMENT_URL"
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
+      
+      - name: Read metadata stats
+        id: stats
+        run: |
+          LATEST=$(ls -dt TITAN_OUTPUT_V7_* | head -1)
+          
+          if [ -f "$LATEST/web/assets/content_history.json" ]; then
+            STATS=$(python3 << 'EOF'
+import json
+import sys
+from pathlib import Path
+
+latest = "${{ env.LATEST }}"
+if not latest:
+    import subprocess
+    latest = subprocess.check_output(['ls', '-dt', 'TITAN_OUTPUT_V7_*']).decode().split()[0]
+
+history_file = Path(latest) / "web/assets/content_history.json"
+
+if history_file.exists():
+    with open(history_file) as f:
+        data = json.load(f)
+        print(f"{len(data['seo_pages'])},{len(data['blog_posts'])},{len(data['podcasts'])},{data['last_episode_number']}")
+else:
+    print("0,0,0,0")
+EOF
+)
+            echo "STATS=$STATS" >> $GITHUB_ENV
+            echo "✅ Stats extracted: $STATS"
+          else
+            echo "STATS=0,0,0,0" >> $GITHUB_ENV
+            echo "⚠️ No metadata file found"
+          fi
+      
+      - name: Success notification
+        if: success()
+        run: |
+          IFS=',' read -r TOTAL_SEO TOTAL_BLOG TOTAL_PODCAST LATEST_EP <<< "${{ env.STATS }}"
+          
+          MESSAGE="✅ TITAN V7 PERSISTENT SUCCESS!%0A%0A"
+          MESSAGE="${MESSAGE}📊 TOTAL CONTENT:%0A"
+          MESSAGE="${MESSAGE}   • SEO Pages: ${TOTAL_SEO}%0A"
+          MESSAGE="${MESSAGE}   • Blog Posts: ${TOTAL_BLOG}%0A"
+          MESSAGE="${MESSAGE}   • Podcasts: ${TOTAL_PODCAST}%0A"
+          MESSAGE="${MESSAGE}   • Latest Episode: #${LATEST_EP}%0A%0A"
+          MESSAGE="${MESSAGE}🔗 dashboard.sayplay.co.uk%0A"
+          MESSAGE="${MESSAGE}🚀 Deployment: ${{ env.DEPLOYMENT_URL }}"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=HTML" || echo "⚠️ Telegram notification failed"
+      
+      - name: Failure notification
+        if: failure()
+        run: |
+          MESSAGE="❌ TITAN V7 PERSISTENT FAILED!%0A%0A"
+          MESSAGE="${MESSAGE}⚠️ Check workflow logs:%0A"
+          MESSAGE="${MESSAGE}https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" || echo "⚠️ Telegram notification failed"
+      
+      - name: Cleanup old outputs
+        if: always()
+        run: |
+          echo "🧹 Cleaning old output directories..."
+          
+          # Keep only the 3 most recent output directories
+          OLD_DIRS=$(ls -dt TITAN_OUTPUT_V7_* 2>/dev/null | tail -n +4)
+          
+          if [ -n "$OLD_DIRS" ]; then
+            echo "$OLD_DIRS" | xargs rm -rf
+            echo "✅ Removed old directories"
+          else
+            echo "📁 No old directories to remove"
+          fi
+      
+      - name: Upload artifacts (for debugging)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: titan-v7-debug
+          path: |
+            TITAN_OUTPUT_V7_*/
+            content_history.json
+          retention-days: 7
