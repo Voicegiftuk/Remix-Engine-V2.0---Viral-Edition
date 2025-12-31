@@ -1,0 +1,85 @@
+name: Titan V5 CASCADE
+
+on:
+  schedule:
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+
+env:
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  generate-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install --upgrade pip
+          pip install google-generativeai edge-tts jinja2 requests pillow
+      
+      - name: Prepare assets
+        run: |
+          mkdir -p runtime_assets
+          
+          # Audio (CORRECT PATHS)
+          [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ] && cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/ && echo "✅ Intro"
+          [ -f "assets/music/Just tap.no app final podkast.mp3" ] && cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/ && echo "✅ Outro"
+          
+          # Images (CORRECT PATHS - no Voicegiftuk)
+          [ -f "assets/brand/sayplay_logo.png" ] && cp "assets/brand/sayplay_logo.png" runtime_assets/ && echo "✅ Logo"
+          [ -f "assets/brand/milo&gigi-razem-z-logo-sayplay.png" ] && cp "assets/brand/milo&gigi-razem-z-logo-sayplay.png" runtime_assets/milo-gigi.png && echo "✅ Mascots"
+          
+          ls -lh runtime_assets/
+      
+      - name: Generate content (CASCADE)
+        run: |
+          echo "🚀 TITAN V5 CASCADE - Unbreakable mode..."
+          python titan_master_orchestrator_v5_cascade.py
+      
+      - name: Verify content
+        run: |
+          LATEST=$(ls -dt TITAN_OUTPUT_V5_* | head -1)
+          
+          SEO=$(find $LATEST/web/seo -name '*.html' | wc -l)
+          BLOG=$(find $LATEST/web/blog -name '*.html' | wc -l)
+          PODCAST=$(find $LATEST/web/podcasts -name '*.mp3' | wc -l)
+          
+          echo "Generated: SEO=$SEO Blog=$BLOG Podcasts=$PODCAST"
+          
+          [ "$SEO" -ge 10 ] && [ "$BLOG" -ge 10 ] && [ "$PODCAST" -ge 10 ] && echo "✅ All content generated!" || exit 1
+      
+      - name: Deploy
+        run: |
+          LATEST=$(ls -dt TITAN_OUTPUT_V5_* | head -1)
+          mkdir -p deploy
+          cp -r $LATEST/web/* deploy/
+          
+          npm install --global vercel@latest
+          cd deploy
+          vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+          vercel build --prod --token=$VERCEL_TOKEN
+          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+      
+      - name: Success notification
+        if: success()
+        run: |
+          MESSAGE="✅ TITAN V5 CASCADE Complete!%0A10 SEO + 10 Blog + 10 Podcasts%0ASystem: UNBREAKABLE%0A🔗 dashboard.sayplay.co.uk"
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=${TELEGRAM_CHAT_ID}" -d "text=${MESSAGE}" || true
