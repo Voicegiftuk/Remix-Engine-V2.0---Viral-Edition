@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 """
 Content Metadata Manager
-- Tracks all generated content
-- Prevents duplicates
-- Manages episode numbering
-- Persists to JSON file
+Tracks all generated content, prevents duplicates, manages episode numbering
 """
 import json
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 import hashlib
 
 
@@ -25,11 +22,13 @@ class ContentMetadataManager:
         if self.history_file.exists():
             try:
                 with open(self.history_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except:
-                pass
+                    data = json.load(f)
+                    print(f"📖 Loaded history: {len(data.get('seo_pages', []))} SEO, {len(data.get('blog_posts', []))} blogs, {len(data.get('podcasts', []))} podcasts")
+                    return data
+            except Exception as e:
+                print(f"⚠️ Error loading history: {e}")
         
-        # Default structure
+        print("📄 Creating new history file")
         return {
             'seo_pages': [],
             'blog_posts': [],
@@ -42,10 +41,14 @@ class ContentMetadataManager:
         """Save history to JSON"""
         self.data['last_updated'] = datetime.now().isoformat()
         
+        # Ensure directory exists
+        self.history_file.parent.mkdir(parents=True, exist_ok=True)
+        
         with open(self.history_file, 'w', encoding='utf-8') as f:
             json.dump(self.data, f, indent=2, ensure_ascii=False)
         
-        print(f"✅ Metadata saved: {self.history_file}")
+        print(f"💾 Metadata saved: {self.history_file}")
+        print(f"   Total: {len(self.data['seo_pages'])} SEO, {len(self.data['blog_posts'])} blogs, {len(self.data['podcasts'])} podcasts")
     
     def _generate_hash(self, text: str) -> str:
         """Generate hash for duplicate detection"""
@@ -54,17 +57,17 @@ class ContentMetadataManager:
     def is_duplicate_seo(self, topic: str, city: str) -> bool:
         """Check if SEO page already exists"""
         key = self._generate_hash(f"{topic}_{city}")
-        return any(page['hash'] == key for page in self.data['seo_pages'])
+        return any(page.get('hash') == key for page in self.data['seo_pages'])
     
     def is_duplicate_blog(self, topic: str) -> bool:
         """Check if blog post already exists"""
         key = self._generate_hash(topic)
-        return any(post['hash'] == key for post in self.data['blog_posts'])
+        return any(post.get('hash') == key for post in self.data['blog_posts'])
     
     def is_duplicate_podcast(self, topic: str) -> bool:
         """Check if podcast already exists"""
         key = self._generate_hash(topic)
-        return any(ep['hash'] == key for ep in self.data['podcasts'])
+        return any(ep.get('hash') == key for ep in self.data['podcasts'])
     
     def add_seo_page(self, topic: str, city: str, filename: str, title: str):
         """Record new SEO page"""
@@ -136,9 +139,3 @@ class ContentMetadataManager:
             'last_episode': self.data['last_episode_number'],
             'last_updated': self.data.get('last_updated')
         }
-
-
-if __name__ == "__main__":
-    # Test
-    manager = ContentMetadataManager()
-    print("Stats:", manager.get_stats())
