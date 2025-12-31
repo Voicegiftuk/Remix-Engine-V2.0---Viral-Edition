@@ -41,7 +41,6 @@ class ContentMetadataManager:
         """Save history to JSON"""
         self.data['last_updated'] = datetime.now().isoformat()
         
-        # Ensure directory exists
         self.history_file.parent.mkdir(parents=True, exist_ok=True)
         
         with open(self.history_file, 'w', encoding='utf-8') as f:
