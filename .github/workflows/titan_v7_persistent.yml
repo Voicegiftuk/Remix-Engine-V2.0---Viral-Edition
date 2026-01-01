@@ -21,7 +21,7 @@ env:
 jobs:
   agency-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 120 # Zwiększony czas na generowanie długich tekstów
+    timeout-minutes: 120
     
     steps:
       - uses: actions/checkout@v4
@@ -33,25 +33,22 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install Agency Tools
+      - name: Install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg jq
           pip install --upgrade pip
           pip install google-generativeai edge-tts jinja2 requests pillow
       
-      - name: Setup Agency Workspace
+      - name: Setup Workspace
         run: |
           mkdir -p website
           mkdir -p social_media
           mkdir -p runtime_assets
-          
-          # Copy Assets Safety
+          # Copy Assets (Ignore errors if missing)
           [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ] && cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/ || true
-          [ -f "assets/music/Just tap.no app final podkast.mp3" ] && cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/ || true
           [ -f "assets/brand/sayplay_logo.png" ] && cp "assets/brand/sayplay_logo.png" runtime_assets/ || true
-          [ -f "assets/brand/milo&gigi-razem-z-logo-sayplay.png" ] && cp "assets/brand/milo&gigi-razem-z-logo-sayplay.png" runtime_assets/milo-gigi.png || true
       
-      - name: Load Analytics History
+      - name: Load Analytics
         run: |
           if [ ! -f "analytics_history.json" ]; then
             echo '{"history":[]}' > analytics_history.json
@@ -60,40 +57,34 @@ jobs:
       - name: Start Marketing Engine
         run: python titan_v10_ultimate.py
       
-      - name: Save Agency Output (Commit)
+      # --- NEW STEP: Backup ZIP Upload ---
+      - name: Upload Social Assets to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: Social-Media-Campaigns
+          path: social_media/
+      # -----------------------------------
+
+      - name: Save & Commit
         run: |
           git config --local user.email "agency@sayplay.co.uk"
           git config --local user.name "Titan V10 Agency"
-          
-          # Add Website (Public)
-          git add website/
-          # Add Social Media Drafts (Internal)
-          git add social_media/
-          # Add Analytics Data (Memory)
-          git add analytics_history.json
+          git add website/ social_media/ analytics_history.json
           
           if git diff --staged --quiet; then
-            echo "No new campaigns created."
+            echo "No changes."
           else
-            git commit -m "V10 Agency: New Campaigns & Analytics Update [skip ci]"
+            git commit -m "V10: Agency Content Update [skip ci]"
             git pull --rebase
             git push
           fi
       
-      - name: Deploy Website to Vercel
+      - name: Deploy to Vercel
         run: |
           npm install --global vercel@latest
           rm -rf .git
           cd website
-          # Auto-create vercel.json if missing
           echo '{"version": 2}' > vercel.json
           mkdir -p .vercel
           echo '{"orgId":"'$VERCEL_ORG_ID'","projectId":"'$VERCEL_PROJECT_ID'"}' > .vercel/project.json
           vercel deploy --prod --token=$VERCEL_TOKEN --yes
-      
-      - name: Agency Report
-        if: success()
-        run: |
-          CAMPAIGNS=$(ls -1 social_media | wc -l)
-          MESSAGE="✅ TITAN V10 REPORT%0A%0AAgency has completed operations.%0A📈 Campaigns Created: ${CAMPAIGNS}%0A🌐 Website Updated%0A📱 Social Assets Ready in GitHub"
-          [ -n "$TELEGRAM_BOT_TOKEN" ] && curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=${TELEGRAM_CHAT_ID}" -d "text=${MESSAGE}" || true
