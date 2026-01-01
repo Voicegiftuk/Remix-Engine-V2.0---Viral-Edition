@@ -1,4 +1,4 @@
-name: Titan V9 Persistent Library
+name: Titan V10 Ultimate Agency
 
 on:
   schedule:
@@ -19,9 +19,9 @@ env:
   TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
 jobs:
-  generate-deploy:
+  agency-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120 # Zwiększony czas na generowanie długich tekstów
     
     steps:
       - uses: actions/checkout@v4
@@ -33,111 +33,67 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install dependencies
+      - name: Install Agency Tools
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg jq
           pip install --upgrade pip
           pip install google-generativeai edge-tts jinja2 requests pillow
       
-      - name: Prepare Persistence & Assets
+      - name: Setup Agency Workspace
         run: |
           mkdir -p website
+          mkdir -p social_media
           mkdir -p runtime_assets
           
-          # Kopiowanie assetów (z obsługą błędu jeśli pliki nie istnieją)
+          # Copy Assets Safety
           [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ] && cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/ || true
           [ -f "assets/music/Just tap.no app final podkast.mp3" ] && cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/ || true
           [ -f "assets/brand/sayplay_logo.png" ] && cp "assets/brand/sayplay_logo.png" runtime_assets/ || true
           [ -f "assets/brand/milo&gigi-razem-z-logo-sayplay.png" ] && cp "assets/brand/milo&gigi-razem-z-logo-sayplay.png" runtime_assets/milo-gigi.png || true
       
-      - name: Initialize History
+      - name: Load Analytics History
         run: |
-          # --- FIX: Bezpieczne sprawdzanie pliku ---
-          if [ ! -f "content_history.json" ]; then
-            echo '{"seo_pages":[],"blog_posts":[],"podcasts":[],"last_episode_number":0,"last_updated":null}' > content_history.json
-            echo "📄 Created new history file."
-          else
-            echo "✅ History file found. Continuing..."
-          fi
-          # -----------------------------------------
-      
-      - name: Generate Content (Library Build)
-        run: python titan_master_orchestrator_v7_persistent.py
-      
-      - name: Verify Output
-        run: |
-          SEO=$(find "website/seo" -name '*.html' | wc -l)
-          BLOG=$(find "website/blog" -name '*.html' | wc -l)
-          PODCAST=$(find "website/podcasts" -name '*.mp3' | wc -l)
-          
-          echo "📊 Current Library Size:"
-          echo "SEO Pages: $SEO"
-          echo "Blog Posts: $BLOG"
-          echo "Podcasts: $PODCAST"
-          
-          # Nie przerywaj, jeśli biblioteka jest mała, ważne że działa
-          if [ "$SEO" -eq 0 ] && [ "$BLOG" -eq 0 ]; then
-             echo "⚠️ Warning: No content generated, but proceeding to save state."
+          if [ ! -f "analytics_history.json" ]; then
+            echo '{"history":[]}' > analytics_history.json
           fi
       
-      - name: Commit to GitHub (The Snowball Effect)
+      - name: Start Marketing Engine
+        run: python titan_v10_ultimate.py
+      
+      - name: Save Agency Output (Commit)
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "agency@sayplay.co.uk"
+          git config --local user.name "Titan V10 Agency"
           
-          # Dodajemy folder website i historię
+          # Add Website (Public)
           git add website/
-          git add content_history.json
+          # Add Social Media Drafts (Internal)
+          git add social_media/
+          # Add Analytics Data (Memory)
+          git add analytics_history.json
           
-          # Commitujemy tylko jeśli są zmiany
           if git diff --staged --quiet; then
-            echo "No changes to commit."
+            echo "No new campaigns created."
           else
-            git commit -m "Titan V9: Content Update [skip ci]"
+            git commit -m "V10 Agency: New Campaigns & Analytics Update [skip ci]"
             git pull --rebase
             git push
           fi
       
-      - name: Prepare Deployment
-        run: |
-          mkdir -p deploy
-          cp -r website/* deploy/
-      
-      - name: Create Vercel config
-        run: |
-          cd deploy
-          cat > vercel.json << 'EOF'
-          {
-            "version": 2,
-            "routes": [
-              {"src": "/", "dest": "/index.html"},
-              {"src": "/seo", "dest": "/seo/index.html"},
-              {"src": "/seo/", "dest": "/seo/index.html"},
-              {"src": "/blog", "dest": "/blog/index.html"},
-              {"src": "/blog/", "dest": "/blog/index.html"},
-              {"src": "/podcasts", "dest": "/podcasts/index.html"},
-              {"src": "/podcasts/", "dest": "/podcasts/index.html"},
-              {"src": "/(.*)", "dest": "/$1"}
-            ]
-          }
-          EOF
-      
-      - name: Deploy to Vercel
+      - name: Deploy Website to Vercel
         run: |
           npm install --global vercel@latest
           rm -rf .git
-          cd deploy
+          cd website
+          # Auto-create vercel.json if missing
+          echo '{"version": 2}' > vercel.json
           mkdir -p .vercel
           echo '{"orgId":"'$VERCEL_ORG_ID'","projectId":"'$VERCEL_PROJECT_ID'"}' > .vercel/project.json
           vercel deploy --prod --token=$VERCEL_TOKEN --yes
       
-      - name: Success Notification
+      - name: Agency Report
         if: success()
         run: |
-          TOTAL_SEO=$(jq '.seo_pages | length' content_history.json 2>/dev/null || echo "0")
-          TOTAL_BLOG=$(jq '.blog_posts | length' content_history.json 2>/dev/null || echo "0")
-          TOTAL_PODCAST=$(jq '.podcasts | length' content_history.json 2>/dev/null || echo "0")
-          
-          MESSAGE="✅ TITAN V9 RUN COMPLETE!%0A%0ALibrary Status:%0A📄 SEO Pages: ${TOTAL_SEO}%0A📝 Blog Posts: ${TOTAL_BLOG}%0A🎙️ Podcasts: ${TOTAL_PODCAST}%0A%0A🌐 dashboard.sayplay.co.uk"
-          
+          CAMPAIGNS=$(ls -1 social_media | wc -l)
+          MESSAGE="✅ TITAN V10 REPORT%0A%0AAgency has completed operations.%0A📈 Campaigns Created: ${CAMPAIGNS}%0A🌐 Website Updated%0A📱 Social Assets Ready in GitHub"
           [ -n "$TELEGRAM_BOT_TOKEN" ] && curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=${TELEGRAM_CHAT_ID}" -d "text=${MESSAGE}" || true
