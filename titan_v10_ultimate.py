@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """
-TITAN V11 "EMERGENCY RESCUE" - DIRECT REST API & ROBUST TEMPLATES
-Fixes:
-- GEMINI 404 ERROR: Uses direct HTTP requests (bypassing broken library).
-- GARBAGE CONTENT: Replaced "SayPlay..." loop with a professional HTML Template Engine.
-- MISSING FILES: Verifies file generation before finishing.
+SAYPLAY MEDIA ENGINE (SPME) V1 - COMPLETE SYSTEM
+4 Blocks: Trend Intelligence + Editorial + SEO + Social + Visual + Podcasts
 """
 import sys
 import os
@@ -16,273 +13,633 @@ import random
 import urllib.parse
 import shutil
 import subprocess
+
+from dashboard_index_generator import DashboardIndexGenerator
+
+# Libraries
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+
+try:
+    import edge_tts
+    EDGE_TTS_AVAILABLE = True
+except ImportError:
+    EDGE_TTS_AVAILABLE = False
+
 import requests
-import time
 
-# --- CONFIGURATION ---
+# --- CONFIG ---
 class Config:
-    # Używamy stabilnego modelu via REST API
-    GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-    OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions'
+    GEMINI_MODEL = 'gemini-1.5-flash'
+    GROQ_MODEL = 'llama-3.1-70b-versatile'
     GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions'
+    IMAGE_WIDTH = 1280
+    IMAGE_HEIGHT = 720
     
-    # Klucze
-    GEMINI_KEY = os.getenv('GEMINI_API_KEY')
-    OPENAI_KEY = os.getenv('OPENAI_API_KEY')
-    GROQ_KEY = os.getenv('GROQ_API_KEY')
-    
-    TELEGRAM_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-    TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+    # Anti-Marketing Validator
+    FORBIDDEN_WORDS = [
+        "buy now", "click here", "order today", "limited offer",
+        "discount code", "add to cart", "purchase now", "sales team"
+    ]
 
-# --- TEMPLATE ENGINE (Safety Net) ---
-class TemplateEngine:
-    """Generuje wysokiej jakości treść BEZ AI, jeśli API zawiedzie."""
-    
-    def get_seo_html(self, topic, city):
-        return f"""
-        <div class="prose prose-lg mx-auto">
-            <p class="lead">Looking for <strong>{topic}</strong> in <strong>{city}</strong>? You've come to the right place. In a world of digital noise, finding a gift that truly resonates is harder than ever.</p>
-            <h2>The Challenge of Gifting in {city}</h2>
-            <p>Whether you're shopping in the vibrant center of {city} or browsing online, the problem is the same: gifts often lack a personal voice. A card is read once and discarded. A text message feels fleeting.</p>
-            <h2>The Solution: SayPlay</h2>
-            <p>Imagine attaching your actual voice to {topic}. With SayPlay NFC stickers, you can record a heartfelt message that plays instantly when tapped. It's not just a gift; it's a memory.</p>
-            <h3>How It Works</h3>
-            <ul>
-                <li><strong>Record:</strong> Use your phone to record a video or audio message.</li>
-                <li><strong>Stick:</strong> Attach the SayPlay code to your {topic}.</li>
-                <li><strong>Give:</strong> Watch their face light up when they hear you.</li>
-            </ul>
-            <p>Make your next gift in {city} unforgettable with SayPlay.</p>
-        </div>
-        """
+# --- CMEL (Content Memory & Evolution Layer) ---
+class CMEL:
+    """Brain - remembers topics, angles, prevents duplicates"""
+    def __init__(self, filepath: Path):
+        self.filepath = filepath
+        self.data = self._load()
 
-    def get_blog_html(self, topic):
-        return f"""
-        <div class="prose prose-lg mx-auto">
-            <p>When it comes to <strong>{topic}</strong>, the most valuable ingredient isn't money—it's emotion.</p>
-            <h2>Why Voice Matters</h2>
-            <p>Psychological studies show that the sound of a loved one's voice reduces cortisol levels and increases oxytocin. Traditional gifts can't do that. But SayPlay can.</p>
-            <h2>Elevating {topic}</h2>
-            <p>By adding a multimedia message to {topic}, you transform a physical object into an emotional experience. It's simple, powerful, and lasts forever.</p>
-            <blockquote>"The best gifts are the ones that speak to us."</blockquote>
-            <p>Don't settle for ordinary. Add your voice today.</p>
-        </div>
-        """
-
-    def get_podcast_script(self, topic):
-        # Unikalny skrypt proceduralny (nie powtórzenia!)
-        return f"""
-        Welcome to the Say Play Gift Guide. I'm your host, Sonia. 
-        Today, we are diving deep into {topic}. 
-        You know, we often stress about finding the perfect item, but we forget that the connection is what matters most. 
-        That is exactly where Say Play comes in. Our technology allows you to attach a voice or video message directly to any gift. 
-        Imagine giving {topic} and having your voice tell the story behind it. 
-        It is simple, it requires no app, and it works on all modern phones. 
-        So next time you are thinking about {topic}, remember: the best gift is your presence. 
-        Visit Say Play dot co dot U K to get started. 
-        Thank you for listening!
-        """
-
-# --- DIRECT API BRAIN (No Libraries) ---
-class DirectBrain:
-    def __init__(self):
-        self.template = TemplateEngine()
-
-    def generate(self, prompt, context_type="general", topic="", city=""):
-        # 1. Try Gemini (REST API)
-        if Config.GEMINI_KEY:
+    def _load(self):
+        if self.filepath.exists():
             try:
-                payload = {"contents": [{"parts": [{"text": prompt}]}]}
-                url = f"{Config.GEMINI_API_URL}?key={Config.GEMINI_KEY}"
-                response = requests.post(url, json=payload, timeout=30)
-                
-                if response.status_code == 200:
-                    text = response.json()['candidates'][0]['content']['parts'][0]['text']
-                    return text
-                else:
-                    print(f"      ⚠️ Gemini Error {response.status_code}: {response.text[:100]}")
-            except Exception as e:
-                print(f"      ⚠️ Gemini Connection Failed: {e}")
-
-        # 2. Try OpenAI
-        if Config.OPENAI_KEY:
-            try:
-                headers = {"Authorization": f"Bearer {Config.OPENAI_KEY}"}
-                payload = {"model": "gpt-3.5-turbo", "messages": [{"role": "user", "content": prompt}]}
-                response = requests.post(Config.OPENAI_ENDPOINT, json=payload, headers=headers, timeout=30)
-                if response.status_code == 200:
-                    return response.json()['choices'][0]['message']['content']
-            except: pass
-
-        # 3. Try Groq
-        if Config.GROQ_KEY:
-            try:
-                headers = {"Authorization": f"Bearer {Config.GROQ_KEY}"}
-                payload = {"model": "llama-3.1-70b-versatile", "messages": [{"role": "user", "content": prompt}]}
-                response = requests.post(Config.GROQ_ENDPOINT, json=payload, headers=headers, timeout=30)
-                if response.status_code == 200:
-                    return response.json()['choices'][0]['message']['content']
-            except: pass
-
-        # 4. EMERGENCY FALLBACK (Template)
-        print(f"      🚨 ALL APIs FAILED. Using Template for {topic}")
-        if context_type == 'seo': return self.template.get_seo_html(topic, city)
-        if context_type == 'blog': return self.template.get_blog_html(topic)
-        if context_type == 'podcast': return self.template.get_podcast_script(topic)
-        return f"Content regarding {topic}."
-
-# --- VISUAL STUDIO ---
-class VisualStudio:
-    def __init__(self, assets_path: Path):
-        self.path = assets_path / "images"
-        self.path.mkdir(parents=True, exist_ok=True)
-
-    def generate(self, topic, ratio="landscape"):
-        # Auto-download from Pollinations (Free, reliable)
-        width, height = (1280, 720) if ratio == "landscape" else (720, 1280)
-        slug = "".join(x for x in topic.lower() if x.isalnum() or x == "-")[:40]
-        filename = f"{slug}_{ratio}.jpg"
-        local = self.path / filename
+                with open(self.filepath, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except:
+                pass
         
-        if local.exists(): return f"/assets/images/{filename}"
+        return {
+            "global_id_counter": 100,
+            "knowledge_graph": [],
+            "content_log": [],
+            "social_signals": {}
+        }
 
-        print(f"      🎨 Designing {ratio}: {topic}")
-        prompt = f"cinematic photography of {topic}, luxury gift style, 8k, soft lighting"
-        url = f"https://pollinations.ai/p/{urllib.parse.quote(prompt)}?width={width}&height={height}&nologo=true"
+    def save(self):
+        self.filepath.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.filepath, 'w', encoding='utf-8') as f:
+            json.dump(self.data, f, indent=2)
+
+    def get_next_id(self):
+        self.data["global_id_counter"] += 1
+        return self.data["global_id_counter"]
+
+    def is_topic_exhausted(self, topic):
+        """Check if topic used >3 times"""
+        count = sum(1 for item in self.data["content_log"] if item.get("topic") == topic)
+        return count > 3
+
+    def register_content(self, c_type, topic, angle, filename):
+        entry = {
+            "id": self.get_next_id(),
+            "date": datetime.now().isoformat(),
+            "type": c_type,
+            "topic": topic,
+            "angle": angle,
+            "filename": filename
+        }
+        self.data["content_log"].append(entry)
+        self.save()
+        return entry["id"]
+
+    def get_stats(self):
+        return {
+            "seo": sum(1 for x in self.data["content_log"] if x.get("type") == "seo"),
+            "blog": sum(1 for x in self.data["content_log"] if x.get("type") == "blog"),
+            "podcasts": sum(1 for x in self.data["content_log"] if x.get("type") == "podcast"),
+            "last_id": self.data["global_id_counter"]
+        }
+
+# --- BLOCK 1: TREND INTELLIGENCE ---
+class TrendIntelligence:
+    """Harvests topics from Reddit/Trends simulation"""
+    def __init__(self, brain):
+        self.brain = brain
+
+    def harvest_trends(self, cmel: CMEL):
+        print("\n📡 BLOCK 1: Trend Intelligence")
+        
+        base_topics = [
+            "Long distance relationship gifts",
+            "Gifts for grandparents who have everything",
+            "Meaningful wedding favors",
+            "Baby shower messages that last",
+            "Comforting gifts for grief",
+            "Graduation keepsakes UK",
+            "First birthday time capsule ideas",
+            "Anniversary gifts beyond flowers",
+            "Retirement gifts with meaning",
+            "New parent survival gifts",
+            "Gifts for homesick students",
+            "Voice messages for military families",
+            "Memorial gifts for loss",
+            "Wedding vows preservation",
+            "Birthday wishes that last forever"
+        ]
+        
+        candidates = []
+        for topic in base_topics:
+            if not cmel.is_topic_exhausted(topic):
+                angle = self.brain.get_angle(topic)
+                candidates.append({"topic": topic, "angle": angle})
+                print(f"   ✅ {topic[:50]}")
+        
+        random.shuffle(candidates)
+        selected = candidates[:10]
+        print(f"   📊 Selected: {len(selected)} topics")
+        return selected
+
+# --- BLOCK 2: EDITORIAL ENGINE ---
+class EditorialEngine:
+    """Writes editorial blog posts with quality validation"""
+    def __init__(self, brain):
+        self.brain = brain
+
+    def create_blog_post(self, topic, angle):
+        print(f"\n✍️  BLOCK 2: Editorial Blog")
+        print(f"   Topic: {topic}")
+        print(f"   Angle: {angle}")
+        
+        persona = "Relationship Psychologist writing for The Atlantic. Empathetic, deep."
+        
+        prompt = f"""
+{persona}
+
+Write a deep essay about "{topic}".
+ANGLE: {angle}
+Focus on psychology of memory and voice.
+
+RULES:
+- NO sales pitch
+- British English
+- 1500+ characters
+- Structure: Hook → Analysis → Voice Role → Subtle Solution
+
+Mention SayPlay ONCE neutrally at end: "Solutions like SayPlay..."
+
+JSON output:
+{{
+  "title": "...",
+  "article_html": "<p>...</p>"
+}}
+"""
+        
+        for attempt in range(3):
+            print(f"      Attempt {attempt + 1}/3...")
+            content = self.brain.generate(prompt, json_mode=True)
+            
+            if self._validate(content):
+                print(f"      ✅ Validated")
+                return content
+            
+            print(f"      ⚠️  Failed validation")
+        
+        return self._emergency_blog(topic)
+
+    def _validate(self, content):
+        if not content:
+            return False
+        
+        text = str(content).lower()
+        
+        if len(text) < 1500:
+            return False
+        
+        for bad in Config.FORBIDDEN_WORDS:
+            if bad in text:
+                print(f"         ❌ Forbidden: '{bad}'")
+                return False
+        
+        return True
+
+    def _emergency_blog(self, topic):
+        return {
+            "title": f"{topic}: A Thoughtful Guide",
+            "article_html": f"<p>Exploring {topic.lower()} through the lens of emotional connection. The psychology of gift-giving extends beyond material value. Voice messages preserve presence. Solutions like SayPlay enable this through NFC technology.</p>"
+        }
+
+# --- BLOCK 3: SEO ENGINE ---
+class SEOEngine:
+    """Creates SEO pages with local targeting"""
+    def __init__(self, brain):
+        self.brain = brain
+
+    def create_seo_page(self, topic, city):
+        print(f"\n🌐 BLOCK 3: SEO Page")
+        print(f"   Topic: {topic} in {city}")
+        
+        prompt = f"""
+Senior SEO Specialist. Intent: Informational.
+
+Create guide: "{topic} in {city}"
+
+Include:
+- Local {city} references (vibes, NOT spam)
+- Mention Mylo & Gigi mascots
+- British English
+- 1800+ characters
+- NO sales language
+
+JSON:
+{{
+  "title": "...",
+  "meta_desc": "...",
+  "intro_html": "<p>...</p>",
+  "problem_html": "<p>...</p>",
+  "solution_html": "<p>...</p>",
+  "local_html": "<p>...</p>",
+  "faq_html": "<div>...</div>"
+}}
+"""
+        
+        content = self.brain.generate(prompt, json_mode=True)
+        
+        if content and len(str(content)) > 1500:
+            print(f"      ✅ SEO generated")
+            return content
+        
+        print(f"      🚨 Emergency template")
+        return self._emergency_seo(topic, city)
+
+    def _emergency_seo(self, topic, city):
+        return {
+            "title": f"{topic} in {city} | SayPlay UK",
+            "meta_desc": f"Discover {topic.lower()} in {city}. Add voice messages with SayPlay.",
+            "intro_html": f"<p>Finding {topic.lower()} in {city} requires personalization.</p>",
+            "problem_html": "<p>Generic gifts lack emotional connection.</p>",
+            "solution_html": f"<p>SayPlay's NFC stickers attach voice messages to any gift. Record 60s voice or 30s video. No app needed. Features Mylo and Gigi mascots.</p>",
+            "local_html": f"<p>Shopping in {city} offers diverse options. Personalize with voice.</p>",
+            "faq_html": "<div><h4>How does it work?</h4><p>Record message online, link to NFC sticker, attach to gift.</p></div>"
+        }
+
+# --- BLOCK 4: SOCIAL MEDIA GENERATOR ---
+class SocialGenerator:
+    """Creates social media assets in folders"""
+    def __init__(self, brain):
+        self.brain = brain
+
+    def generate_assets(self, topic, angle, output_path: Path):
+        print(f"\n📱 BLOCK 4: Social Assets")
+        print(f"   Folder: {output_path.name}")
+        
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # TikTok
+        tt_prompt = f"TikTok script (60s) about '{topic}'. Hook in 3s. Emotional. [Visual cues]. British."
+        tt_script = self.brain.generate(tt_prompt) or f"[Hook] {topic}. Here's why it matters... [Product] SayPlay NFC stickers..."
+        (output_path / "tiktok_script.txt").write_text(tt_script, encoding='utf-8')
+        print(f"      ✅ TikTok")
+        
+        # Instagram
+        ig_prompt = f"Instagram caption for '{topic}'. Aesthetic lifestyle. 15 hashtags. British."
+        ig_content = self.brain.generate(ig_prompt) or f"{topic} ✨\n\n#gifts #personalized #sayplay #voice"
+        (output_path / "instagram_post.txt").write_text(ig_content, encoding='utf-8')
+        print(f"      ✅ Instagram")
+        
+        # X/Twitter
+        x_prompt = f"3-tweet thread about '{topic}'. Hook, psychology, insight. <280 chars each."
+        x_content = self.brain.generate(x_prompt) or f"1/ {topic}\n\n2/ Psychology\n\n3/ Insight"
+        (output_path / "twitter_thread.txt").write_text(x_content, encoding='utf-8')
+        print(f"      ✅ Twitter/X")
+        
+        # Pinterest
+        p_prompt = f"Pinterest description for '{topic}'. Visual, aesthetic, inspirational."
+        p_content = self.brain.generate(p_prompt) or f"Beautiful {topic.lower()}. Preserve memories."
+        (output_path / "pinterest_description.txt").write_text(p_content, encoding='utf-8')
+        print(f"      ✅ Pinterest")
+
+# --- VISUAL ENGINE ---
+class VisualEngine:
+    """Generates AI images"""
+    def __init__(self, assets_path: Path):
+        self.library_path = assets_path / "images"
+        self.library_path.mkdir(parents=True, exist_ok=True)
+
+    def get_image(self, topic: str) -> str:
+        slug = "".join(x for x in topic.lower() if x.isalnum() or x == "-")[:50]
+        filename = f"{slug}.jpg"
+        local_path = self.library_path / filename
+        web_path = f"/assets/images/{filename}"
+
+        if local_path.exists():
+            return web_path
+
+        print(f"      🎨 Image: {topic[:40]}...")
+        
+        prompt = f"cinematic photo of {topic}, emotional, aesthetic, soft lighting"
+        url = f"https://pollinations.ai/p/{urllib.parse.quote(prompt)}?width={Config.IMAGE_WIDTH}&height={Config.IMAGE_HEIGHT}&seed={random.randint(0,999)}&nologo=true"
         
         try:
             r = requests.get(url, timeout=20)
             if r.status_code == 200:
-                with open(local, 'wb') as f: f.write(r.content)
-                return f"/assets/images/{filename}"
-        except: pass
-        return "/assets/milo-gigi.png" # Safe fallback
+                local_path.write_bytes(r.content)
+                return web_path
+        except:
+            pass
+        
+        return "/assets/milo-gigi.png"
 
-# --- WEB DESIGNER ---
-class WebDesigner:
-    def build_page(self, type, title, content, path, image_url):
-        # Clean HTML content if it came from AI (remove markdown)
-        content = content.replace('```html', '').replace('```', '')
+# --- DESIGNER ---
+class ChameleonDesigner:
+    def build_page(self, page_type, data, path, image_url):
+        title = data.get('title', 'SayPlay')
         
-        html = f"""<!DOCTYPE html><html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>{title}</title>
-            <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-            <style>body{{font-family:'Inter',sans-serif}} h1,h2{{font-family:'Playfair Display',serif}}</style>
-        </head>
-        <body class="bg-white text-gray-900">
-            <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100">
-                <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-                    <a href="https://sayplay.co.uk"><img src="/assets/sayplay_logo.png" class="h-8"></a>
-                    <a href="https://sayplay.co.uk/collections/all" class="bg-black text-white px-6 py-2 rounded-full font-bold hover:bg-orange-600 transition">Shop</a>
-                </div>
-            </nav>
-            <header class="relative pt-20 pb-20 px-6 text-center">
-                <h1 class="text-5xl md:text-7xl font-bold mb-8 text-gray-900 tracking-tight">{title}</h1>
-                <div class="max-w-5xl mx-auto rounded-2xl overflow-hidden shadow-2xl h-[400px] md:h-[600px]">
-                    <img src="{image_url}" class="w-full h-full object-cover">
-                </div>
-            </header>
-            <main class="max-w-3xl mx-auto px-6 pb-24 prose prose-lg prose-orange">
-                {content}
-            </main>
-            <footer class="bg-gray-50 border-t border-gray-200 py-12 text-center">
-                <p class="text-gray-500">&copy; 2026 SayPlay UK</p>
-            </footer>
-        </body></html>"""
+        if page_type == 'blog':
+            content = data.get('article_html', '')
+        else:
+            content = f"{data.get('intro_html', '')}{data.get('problem_html', '')}{data.get('solution_html', '')}{data.get('local_html', '')}{data.get('faq_html', '')}"
         
-        with open(path, 'w', encoding='utf-8') as f: f.write(html)
+        html = f"""<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <meta name="description" content="{data.get('meta_desc', '')}">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-white shadow sticky top-0">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="/" class="text-2xl font-bold"><span class="text-orange-600">Say</span>Play</a>
+            <a href="https://sayplay.co.uk" class="bg-orange-600 text-white px-6 py-2 rounded-full">Shop</a>
+        </div>
+    </nav>
+    
+    <div class="max-w-4xl mx-auto py-12 px-6">
+        <h1 class="text-5xl font-bold mb-8">{title}</h1>
+        <img src="{image_url}" class="w-full h-96 object-cover rounded-xl mb-8">
+        <div class="prose prose-lg max-w-none">
+            {content}
+        </div>
+    </div>
+</body>
+</html>"""
+        
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(html, encoding='utf-8')
 
-# --- COURIER SERVICE ---
-class CourierService:
-    def deliver(self, folder):
-        if not Config.TELEGRAM_TOKEN: return
-        print("\n🚚 Courier: Zipping files...")
-        shutil.make_archive("social_assets", 'zip', folder)
+# --- AUDIO STUDIO ---
+class AudioStudio:
+    def __init__(self):
+        self.intro = self._find("Just tap.No app intro podkast sayplay.mp3")
+        self.outro = self._find("Just tap.no app final podkast.mp3")
+
+    def _find(self, name):
+        for p in [Path("runtime_assets") / name, Path("assets/music") / name]:
+            if p.exists():
+                return p.resolve()
+        return None
+
+    async def generate(self, script, ep, slug, out_dir):
+        if not EDGE_TTS_AVAILABLE:
+            return None
         
-        url = f"https://api.telegram.org/bot{Config.TELEGRAM_TOKEN}/sendDocument"
+        if len(script) < 200:
+            script = f"Welcome to SayPlay podcast episode {ep}. {script}" * 3
+        
+        temp = out_dir / f"temp_{ep}.mp3"
+        
         try:
-            with open("social_assets.zip", 'rb') as f:
-                requests.post(url, data={'chat_id': Config.TELEGRAM_CHAT_ID, 'caption': '📦 Your Assets (V11 Fixed)'}, files={'document': f})
-            print("   ✅ Sent to Telegram")
-        except Exception as e:
-            print(f"   ❌ Courier Error: {e}")
+            communicate = edge_tts.Communicate(script, "en-GB-SoniaNeural")
+            await communicate.save(str(temp))
+        except:
+            return None
+        
+        final = out_dir / f"sayplay_ep_{ep:03d}_{slug}.mp3"
+        
+        inputs = []
+        if self.intro:
+            inputs.append(str(self.intro))
+        inputs.append(str(temp))
+        if self.outro:
+            inputs.append(str(self.outro))
+        
+        if len(inputs) > 1:
+            try:
+                cmd = ['ffmpeg', '-y']
+                for inp in inputs:
+                    cmd.extend(['-i', inp])
+                
+                filter_str = f"concat=n={len(inputs)}:v=0:a=1[out]"
+                cmd.extend(['-filter_complex', filter_str, '-map', '[out]', str(final)])
+                
+                subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            except:
+                shutil.copy(temp, final)
+        else:
+            shutil.copy(temp, final)
+        
+        if temp.exists():
+            temp.unlink()
+        
+        return final
 
-# --- MAIN ---
+# --- AI BRAIN ---
+class ContentBrain:
+    def __init__(self, api_key):
+        self.gemini_key = api_key
+        self.groq_key = os.getenv('GROQ_API_KEY')
+        
+        if GEMINI_AVAILABLE and api_key:
+            genai.configure(api_key=api_key)
+
+    def get_angle(self, topic):
+        """AI determines unique angle"""
+        prompt = f"Give ONE unique emotional angle for '{topic}'. Example: 'The pain of forgetting a voice'. Output ONLY the angle."
+        return self.generate(prompt) or "Emotional value of voice"
+
+    def generate(self, prompt, json_mode=False):
+        res = None
+        
+        # Try Groq first (free)
+        if self.groq_key:
+            try:
+                r = requests.post(
+                    Config.GROQ_ENDPOINT,
+                    headers={'Authorization': f'Bearer {self.groq_key}'},
+                    json={'model': Config.GROQ_MODEL, 'messages': [{'role': 'user', 'content': prompt}]},
+                    timeout=30
+                )
+                if r.status_code == 200:
+                    res = r.json()['choices'][0]['message']['content']
+            except:
+                pass
+        
+        # Try Gemini
+        if not res and self.gemini_key and GEMINI_AVAILABLE:
+            try:
+                model = genai.GenerativeModel(Config.GEMINI_MODEL)
+                response = model.generate_content(prompt)
+                res = response.text
+            except:
+                pass
+        
+        if json_mode and res:
+            try:
+                clean = res.strip()
+                if '```json' in clean:
+                    clean = clean.split('```json')[1].split('```')[0]
+                elif '```' in clean:
+                    clean = clean.split('```')[1].split('```')[0]
+                return json.loads(clean.strip())
+            except:
+                return None
+        
+        return res
+
+# --- MAIN ORCHESTRATOR ---
 async def main():
-    print("🚀 TITAN V11: EMERGENCY RESCUE STARTING...")
+    print("\n" + "="*70)
+    print("🚀 SAYPLAY MEDIA ENGINE V1 - COMPLETE SYSTEM")
+    print("="*70 + "\n")
     
-    # 1. Setup Folders
-    base_dir = Path("website")
-    social_dir = Path("social_media")
-    assets_dir = base_dir / "assets"
-    for d in ['seo', 'blog', 'podcasts', 'assets']: (base_dir / d).mkdir(parents=True, exist_ok=True)
+    start_time = datetime.now()
+    
+    # Setup
+    web_dir = Path("website")
+    social_dir = Path("social_media_assets")
+    assets_dir = web_dir / "assets"
+    
+    for d in ['seo', 'blog', 'podcasts']:
+        (web_dir / d).mkdir(parents=True, exist_ok=True)
+    
     social_dir.mkdir(parents=True, exist_ok=True)
-
-    # 2. Sync Assets
-    if Path("assets/brand").exists(): shutil.copytree("assets/brand", assets_dir, dirs_exist_ok=True)
-    if Path("assets/music").exists(): shutil.copytree("assets/music", assets_dir, dirs_exist_ok=True)
-
-    # 3. Init
-    brain = DirectBrain()
-    visual = VisualStudio(assets_dir)
-    designer = WebDesigner()
-    courier = CourierService()
+    assets_dir.mkdir(parents=True, exist_ok=True)
     
-    # 4. Generate Content (Guaranteed 5 Items)
-    topics = [
-        ("Gifts for Mum", "London"),
-        ("Anniversary Ideas", "Manchester"),
-        ("Long Distance Gifts", "Bristol"),
-        ("Wedding Favors", "Leeds"),
-        ("Baby Shower", "Glasgow")
-    ]
-
-    for topic, city in topics:
-        print(f"\n⚙️ Processing: {topic}")
-        slug = topic.replace(' ', '-').lower()
-        
-        # --- IMAGES ---
-        img_landscape = visual.generate(topic, "landscape")
-        img_portrait = visual.generate(topic, "portrait")
-        
-        # --- WEB: SEO PAGE ---
-        seo_prompt = f"Write a 1000-word HTML article (use h2, p tags) about '{topic} in {city}'. Focus on emotional gifting. Mention SayPlay naturally."
-        seo_content = brain.generate(seo_prompt, "seo", topic, city)
-        designer.build_page("seo", f"{topic} in {city}", seo_content, base_dir/'seo'/f"{slug}-{city.lower()}.html", img_landscape)
-        
-        # --- WEB: BLOG POST ---
-        blog_prompt = f"Write a 1000-word HTML blog post about '{topic}'. Storytelling style. Use h2, p tags."
-        blog_content = brain.generate(blog_prompt, "blog", topic)
-        designer.build_page("blog", topic, blog_content, base_dir/'blog'/f"{slug}.html", img_landscape)
-        
-        # --- SOCIAL ASSETS ---
-        camp_dir = social_dir / slug
-        camp_dir.mkdir(exist_ok=True)
-        
-        # TikTok
-        tt_script = brain.generate(f"TikTok script for {topic}. 60s. Format: Visual - Audio.")
-        with open(camp_dir / "tiktok.txt", "w") as f: f.write(str(tt_script))
-        
-        # Instagram
-        ig_cap = brain.generate(f"Instagram caption for {topic}. 15 hashtags.")
-        with open(camp_dir / "instagram.txt", "w") as f: f.write(str(ig_cap))
-
-    # 5. Deliver
-    courier.deliver(social_dir)
+    # Copy assets
+    print("📂 Syncing assets...")
+    if Path("assets/brand").exists():
+        for f in Path("assets/brand").glob("*"):
+            if f.is_file():
+                shutil.copy(f, assets_dir / f.name)
+                print(f"   ✅ {f.name}")
     
-    # 6. Update Dashboard (Import here to avoid circular dependency issues)
-    try:
-        from dashboard_index_generator import DashboardIndexGenerator
-        from content_metadata_manager import ContentMetadataManager
+    # Initialize modules
+    print("\n🧠 Initializing modules...")
+    cmel = CMEL(Path("content_history.json"))
+    brain = ContentBrain(os.getenv('GEMINI_API_KEY'))
+    
+    trend_module = TrendIntelligence(brain)
+    editorial_module = EditorialEngine(brain)
+    seo_module = SEOEngine(brain)
+    social_module = SocialGenerator(brain)
+    
+    visual = VisualEngine(assets_dir)
+    designer = ChameleonDesigner()
+    audio = AudioStudio()
+    dashboard = DashboardIndexGenerator()
+    
+    print(f"   ✅ CMEL loaded (ID: {cmel.get_stats()['last_id']})")
+    
+    # Harvest topics
+    topics = trend_module.harvest_trends(cmel)
+    
+    if not topics:
+        print("\n⚠️ No new topics")
+        return
+    
+    cities = ['London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 'Bristol', 'Edinburgh', 'Liverpool']
+    
+    # Production loop
+    print(f"\n{'='*70}")
+    print("⚙️  CONTENT PRODUCTION CYCLE")
+    print(f"{'='*70}")
+    
+    for idx, item in enumerate(topics, 1):
+        topic = item['topic']
+        angle = item['angle']
+        city = random.choice(cities)
         
-        # Simple stats update mock for now to ensure run finishes
-        print("   ✅ Content generated successfully.")
-    except:
-        print("   ⚠️ Dashboard update skipped (Module missing), but content is safe.")
+        print(f"\n[{idx}/{len(topics)}] {topic}")
+        
+        # Image
+        img = visual.get_image(topic)
+        
+        # Blog (Block 2)
+        blog_data = editorial_module.create_blog_post(topic, angle)
+        if blog_data:
+            slug = "".join(c for c in topic.lower() if c.isalnum() or c == '-')[:40]
+            blog_file = f"{slug}.html"
+            
+            designer.build_page('blog', blog_data, web_dir / 'blog' / blog_file, img)
+            cmel.register_content('blog', topic, angle, blog_file)
+            
+            # Social assets for blog
+            social_module.generate_assets(topic, angle, social_dir / f"{slug}_social")
+        
+        # SEO Page (Block 3)
+        seo_data = seo_module.create_seo_page(topic, city)
+        if seo_data:
+            slug = "".join(c for c in topic.lower() if c.isalnum() or c == '-')[:40]
+            seo_file = f"{slug}-{city.lower()}.html"
+            
+            designer.build_page('seo', seo_data, web_dir / 'seo' / seo_file, img)
+            cmel.register_content('seo', topic, angle, seo_file)
+        
+        # Podcast
+        script_prompt = f"Podcast script about {topic}. 800 words. Conversational British. Intro, Story, Insight, Outro."
+        script = brain.generate(script_prompt)
+        
+        if script and len(script) > 300:
+            ep_id = cmel.get_stats()['last_id']
+            slug = "".join(c for c in topic.lower() if c.isalnum() or c == '-')[:30]
+            
+            podcast_path = await audio.generate(script, ep_id, slug, web_dir / 'podcasts')
+            
+            if podcast_path:
+                cmel.register_content('podcast', topic, angle, podcast_path.name)
+                print(f"      ✅ Podcast")
+    
+    # Finalize
+    print(f"\n{'='*70}")
+    print("📊 FINALIZING")
+    print(f"{'='*70}\n")
+    
+    cmel.save()
+    shutil.copy(Path("content_history.json"), assets_dir / "content_history.json")
+    
+    # Legacy format for dashboard
+    legacy = {"seo_pages": [], "blog_posts": [], "podcasts": []}
+    
+    for item in cmel.data["content_log"]:
+        if item['type'] == 'seo':
+            legacy['seo_pages'].append({
+                'topic': item['topic'],
+                'city': 'UK',
+                'filename': item['filename'],
+                'title': item['topic'],
+                'created': item['date']
+            })
+        elif item['type'] == 'blog':
+            legacy['blog_posts'].append({
+                'topic': item['topic'],
+                'filename': item['filename'],
+                'title': item['topic'],
+                'created': item['date']
+            })
+        elif item['type'] == 'podcast':
+            legacy['podcasts'].append({
+                'episode': item['id'],
+                'topic': item['topic'],
+                'filename': item['filename'],
+                'created': item['date']
+            })
+    
+    stats = cmel.get_stats()
+    
+    # Generate dashboards
+    dashboard.generate_main_dashboard(web_dir / 'index.html', stats)
+    dashboard.generate_seo_index(web_dir / 'seo' / 'index.html', legacy['seo_pages'])
+    dashboard.generate_blog_index(web_dir / 'blog' / 'index.html', legacy['blog_posts'])
+    dashboard.generate_podcast_index(web_dir / 'podcasts' / 'index.html', legacy['podcasts'])
+    
+    duration = (datetime.now() - start_time).total_seconds()
+    
+    print(f"\n{'='*70}")
+    print("✅ SPME V1 COMPLETE")
+    print(f"{'='*70}")
+    print(f"📊 Generated:")
+    print(f"   • SEO Pages: {stats['seo']}")
+    print(f"   • Blog Posts: {stats['blog']}")
+    print(f"   • Podcasts: {stats['podcasts']}")
+    print(f"   • ID: {stats['last_id']}")
+    print(f"\n⏱  Time: {int(duration // 60)}m {int(duration % 60)}s")
+    print(f"📁 Social: social_media_assets/")
+    print(f"🌐 Dashboard: website/index.html")
+    print(f"{'='*70}\n")
 
 if __name__ == "__main__":
     asyncio.run(main())
