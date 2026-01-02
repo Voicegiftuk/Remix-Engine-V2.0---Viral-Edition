@@ -1,4 +1,4 @@
-name: SPME V1 Complete
+name: SPME V1 Observatory
 
 on:
   schedule:
@@ -32,7 +32,7 @@ jobs:
       - name: Install deps
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg jq
-          pip install google-generativeai edge-tts requests
+          pip install google-generativeai edge-tts requests beautifulsoup4 feedparser lxml
       
       - name: Prepare
         run: |
@@ -40,24 +40,23 @@ jobs:
           [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ] && cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/ || true
           [ -f "assets/music/Just tap.no app final podkast.mp3" ] && cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/ || true
       
-      - name: Run SPME
+      - name: Run SPME Observatory
         run: python spme_v1_engine.py
       
       - name: Commit to repo
         run: |
           git config --local user.email "bot@spme"
-          git config --local user.name "SPME"
+          git config --local user.name "SPME Observatory"
           git add website/ social_media_assets/ content_history.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "SPME V1: Content update [skip ci]" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "SPME Observatory: Content update [skip ci]" && git push)
       
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
       
-      - name: Deploy to Vercel (Direct)
+      - name: Deploy to Vercel
         run: |
           cd website
           
-          # Create Vercel config
           cat > vercel.json << 'EOF'
           {
             "version": 2,
@@ -74,16 +73,10 @@ jobs:
           }
           EOF
           
-          # Create .vercel directory
           mkdir -p .vercel
           echo '{"projectId":"'$VERCEL_PROJECT_ID'","orgId":"'$VERCEL_ORG_ID'"}' > .vercel/project.json
           
-          # Deploy WITHOUT Git integration
-          vercel deploy \
-            --prod \
-            --token=$VERCEL_TOKEN \
-            --yes \
-            --force
+          vercel deploy --prod --token=$VERCEL_TOKEN --yes --force
       
       - name: Notify
         if: success()
@@ -92,6 +85,6 @@ jobs:
           TOTAL_BLOG=$(jq '.content_log | map(select(.type == "blog")) | length' content_history.json 2>/dev/null || echo "0")
           TOTAL_POD=$(jq '.content_log | map(select(.type == "podcast")) | length' content_history.json 2>/dev/null || echo "0")
           
-          MESSAGE="✅ SPME V1 Complete!%0A%0ASEO: ${TOTAL_SEO}%0ABlog: ${TOTAL_BLOG}%0APodcasts: ${TOTAL_POD}%0A%0ASocial assets in GitHub%0A🌐 dashboard.sayplay.co.uk"
+          MESSAGE="🔭 SPME Observatory Complete!%0A%0ASEO: ${TOTAL_SEO}%0ABlog: ${TOTAL_BLOG}%0APodcasts: ${TOTAL_POD}%0A%0A🎯 Real-time trends from 100 UK sources%0A🌐 dashboard.sayplay.co.uk"
           
           [ -n "$TELEGRAM_BOT_TOKEN" ] && curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=${TELEGRAM_CHAT_ID}" -d "text=${MESSAGE}" || true
