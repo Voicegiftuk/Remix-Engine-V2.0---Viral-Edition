@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SAYPLAY MEDIA ENGINE (SPME) V1 - PRODUCTION MASTER
+SAYPLAY MEDIA ENGINE (SPME) V1.1 - PRODUCTION MASTER (FIXED)
 Features:
 1. Multi-AI Cascade (Groq -> Gemini -> HF -> Together -> Perplexity -> Emergency)
 2. Observatory (Scans sources.csv for real trends)
@@ -9,8 +9,7 @@ Features:
 """
 import sys
 import os
-from pathlib import Path
-from datetime import datetime
+import asyncio  # <--- Dodałem brakujący import!
 import json
 import random
 import urllib.parse
@@ -19,23 +18,31 @@ import subprocess
 import csv
 import time
 import requests
+from datetime import datetime
+from pathlib import Path
 
-# --- SAFE IMPORTS ---
+# --- SAFE IMPORTS & WARNING SUPPRESSION ---
+import warnings
+warnings.filterwarnings("ignore") # Wyciszamy ostrzeżenia o deprecation
+
 try:
     import google.generativeai as genai
     GEMINI_AVAILABLE = True
-except ImportError: GEMINI_AVAILABLE = False
+except ImportError: 
+    GEMINI_AVAILABLE = False
 
 try:
     import edge_tts
     EDGE_TTS_AVAILABLE = True
-except ImportError: EDGE_TTS_AVAILABLE = False
+except ImportError: 
+    EDGE_TTS_AVAILABLE = False
 
 try:
     from bs4 import BeautifulSoup
     import feedparser
     SCANNER_AVAILABLE = True
-except ImportError: SCANNER_AVAILABLE = False
+except ImportError: 
+    SCANNER_AVAILABLE = False
 
 # Try import local dashboard generator, else define dummy
 try:
@@ -71,7 +78,9 @@ class MultiAIBrain:
             'perplexity': os.getenv('PERPLEXITY_API_KEY')
         }
         if GEMINI_AVAILABLE and self.keys['gemini']:
-            genai.configure(api_key=self.keys['gemini'])
+            try:
+                genai.configure(api_key=self.keys['gemini'])
+            except: pass
 
     def generate(self, prompt, json_mode=False, min_len=1000):
         # 1. Groq (Fastest/Best Free)
@@ -159,18 +168,21 @@ class UniversalScanner:
         
         # 1. Read CSV
         if os.path.exists(self.csv_path):
-            with open(self.csv_path, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                sources = list(reader)
-                random.shuffle(sources)
-                
-                # Scan 15 random sources
-                for site in sources[:15]:
-                    t_hint = site.get('temat', 'Gift Ideas')
-                    name = site.get('nazwa', 'Unknown')
-                    # Simulate finding a trend (since real scraping is often blocked)
-                    if "404" not in t_hint and "Not Found" not in t_hint:
-                        trends.append(f"{t_hint} ideas from {name}")
+            try:
+                with open(self.csv_path, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    sources = list(reader)
+                    random.shuffle(sources)
+                    
+                    # Scan 15 random sources
+                    for site in sources[:15]:
+                        t_hint = site.get('temat', 'Gift Ideas')
+                        name = site.get('nazwa', 'Unknown')
+                        # Simulate finding a trend (since real scraping is often blocked)
+                        if t_hint and "404" not in t_hint and "Not Found" not in t_hint:
+                            trends.append(f"{t_hint} ideas from {name}")
+            except Exception as e:
+                print(f"⚠️ CSV Read Error: {e}")
 
         # 2. Evergreen Fallback (If CSV fails or returns junk)
         evergreen = [
