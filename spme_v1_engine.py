@@ -56,10 +56,63 @@ class CMEL:
         if self.filepath.exists():
             try:
                 with open(self.filepath, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except:
-                pass
+                    loaded = json.load(f)
+                    
+                    # MIGRATION: Old format to new format
+                    if "content_log" not in loaded:
+                        print("   🔄 Migrating old format to CMEL v1...")
+                        
+                        new_data = {
+                            "global_id_counter": loaded.get("last_episode_number", 100),
+                            "knowledge_graph": [],
+                            "content_log": [],
+                            "social_signals": {}
+                        }
+                        
+                        # Migrate old seo_pages
+                        for page in loaded.get("seo_pages", []):
+                            new_data["content_log"].append({
+                                "id": new_data["global_id_counter"],
+                                "date": page.get("created", datetime.now().isoformat()),
+                                "type": "seo",
+                                "topic": page.get("topic", "Unknown"),
+                                "angle": "legacy",
+                                "filename": page.get("filename", "")
+                            })
+                            new_data["global_id_counter"] += 1
+                        
+                        # Migrate old blog_posts
+                        for post in loaded.get("blog_posts", []):
+                            new_data["content_log"].append({
+                                "id": new_data["global_id_counter"],
+                                "date": post.get("created", datetime.now().isoformat()),
+                                "type": "blog",
+                                "topic": post.get("topic", "Unknown"),
+                                "angle": "legacy",
+                                "filename": post.get("filename", "")
+                            })
+                            new_data["global_id_counter"] += 1
+                        
+                        # Migrate old podcasts
+                        for pod in loaded.get("podcasts", []):
+                            new_data["content_log"].append({
+                                "id": new_data["global_id_counter"],
+                                "date": pod.get("created", datetime.now().isoformat()),
+                                "type": "podcast",
+                                "topic": pod.get("topic", "Unknown"),
+                                "angle": "legacy",
+                                "filename": pod.get("filename", "")
+                            })
+                            new_data["global_id_counter"] += 1
+                        
+                        print(f"   ✅ Migrated {len(new_data['content_log'])} items")
+                        return new_data
+                    
+                    return loaded
+            except Exception as e:
+                print(f"   ⚠️ Error loading: {e}")
         
+        # Fresh start
         return {
             "global_id_counter": 100,
             "knowledge_graph": [],
