@@ -1,0 +1,85 @@
+name: SPME V1 Complete
+
+on:
+  schedule:
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+jobs:
+  generate-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install deps
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg jq
+          pip install google-generativeai edge-tts requests
+      
+      - name: Prepare
+        run: |
+          mkdir -p runtime_assets social_media_assets
+          [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ] && cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/ || true
+          [ -f "assets/music/Just tap.no app final podkast.mp3" ] && cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/ || true
+      
+      - name: Run SPME
+        run: python spme_v1_engine.py
+      
+      - name: Commit
+        run: |
+          git config --local user.email "bot@spme"
+          git config --local user.name "SPME"
+          git add website/ social_media_assets/ content_history.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "SPME V1: Content update [skip ci]" && git push)
+      
+      - name: Deploy
+        run: |
+          npm install --global vercel@latest
+          cd website
+          mkdir -p .vercel
+          echo '{"orgId":"'$VERCEL_ORG_ID'","projectId":"'$VERCEL_PROJECT_ID'"}' > .vercel/project.json
+          cat > vercel.json << 'EOF'
+          {
+            "version": 2,
+            "routes": [
+              {"src": "/", "dest": "/index.html"},
+              {"src": "/seo", "dest": "/seo/index.html"},
+              {"src": "/seo/", "dest": "/seo/index.html"},
+              {"src": "/blog", "dest": "/blog/index.html"},
+              {"src": "/blog/", "dest": "/blog/index.html"},
+              {"src": "/podcasts", "dest": "/podcasts/index.html"},
+              {"src": "/podcasts/", "dest": "/podcasts/index.html"},
+              {"src": "/(.*)", "dest": "/$1"}
+            ]
+          }
+          EOF
+          vercel deploy --prod --token=$VERCEL_TOKEN --yes
+      
+      - name: Notify
+        if: success()
+        run: |
+          TOTAL_SEO=$(jq '.content_log | map(select(.type == "seo")) | length' content_history.json 2>/dev/null || echo "0")
+          TOTAL_BLOG=$(jq '.content_log | map(select(.type == "blog")) | length' content_history.json 2>/dev/null || echo "0")
+          TOTAL_POD=$(jq '.content_log | map(select(.type == "podcast")) | length' content_history.json 2>/dev/null || echo "0")
+          
+          MESSAGE="✅ SPME V1 Complete!%0A%0ASEO: ${TOTAL_SEO}%0ABlog: ${TOTAL_BLOG}%0APodcasts: ${TOTAL_POD}%0A%0ASocial assets in GitHub%0A🌐 dashboard.sayplay.co.uk"
+          
+          [ -n "$TELEGRAM_BOT_TOKEN" ] && curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=${TELEGRAM_CHAT_ID}" -d "text=${MESSAGE}" || true
