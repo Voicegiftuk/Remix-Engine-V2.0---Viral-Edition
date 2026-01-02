@@ -243,24 +243,41 @@ JSON output:
 
     def _validate(self, content):
         if not content:
+            print(f"         ❌ No content returned")
             return False
         
-        text = str(content).lower()
-        
-        if len(text) < 1500:
+        # Check if it's valid dict
+        if not isinstance(content, dict):
+            print(f"         ❌ Not a dict")
             return False
         
+        # Check if has required keys
+        if 'article_html' not in content:
+            print(f"         ❌ Missing article_html")
+            return False
+        
+        # Get article content
+        article_html = content.get('article_html', '')
+        
+        # Length check - 1500 chars minimum
+        if len(article_html) < 1500:
+            print(f"         ❌ Too short ({len(article_html)} chars, need 1500+)")
+            return False
+        
+        # Forbidden words check - only in article_html
+        article_lower = article_html.lower()
         for bad in Config.FORBIDDEN_WORDS:
-            if bad in text:
+            if bad in article_lower:
                 print(f"         ❌ Forbidden: '{bad}'")
                 return False
         
+        print(f"         ✅ Valid ({len(article_html)} chars)")
         return True
 
     def _emergency_blog(self, topic):
         return {
             "title": f"{topic}: A Thoughtful Guide",
-            "article_html": f"<p>Exploring {topic.lower()} through the lens of emotional connection. The psychology of gift-giving extends beyond material value. Voice messages preserve presence. Solutions like SayPlay enable this through NFC technology.</p>"
+            "article_html": f"<p>Exploring {topic.lower()} through the lens of emotional connection and meaningful gift-giving. The psychology behind presents extends far beyond their material value, reaching into the realm of memory, presence, and emotional resonance.</p><p>When we consider {topic.lower()}, we're really contemplating how to bridge distance, preserve moments, and create lasting emotional connections. Voice messages and video recordings preserve not just words, but tone, emotion, laughter, and the unique essence of a person's presence.</p><p>Research in psychology shows that hearing a loved one's voice activates the same neural pathways as being with them in person. This neurological connection explains why voice messages carry such profound emotional weight. Solutions like SayPlay enable this through simple NFC technology, allowing anyone to attach personal voice or video messages to physical gifts.</p><p>The act of recording a message requires thoughtfulness and vulnerability. Unlike text, which can be edited and perfected, voice captures authenticity. This rawness creates deeper connections and more meaningful memories that last far beyond the moment of gift-giving itself.</p>"
         }
 
 # --- BLOCK 3: SEO ENGINE ---
@@ -310,11 +327,11 @@ JSON:
         return {
             "title": f"{topic} in {city} | SayPlay UK",
             "meta_desc": f"Discover {topic.lower()} in {city}. Add voice messages with SayPlay.",
-            "intro_html": f"<p>Finding {topic.lower()} in {city} requires personalization.</p>",
-            "problem_html": "<p>Generic gifts lack emotional connection.</p>",
-            "solution_html": f"<p>SayPlay's NFC stickers attach voice messages to any gift. Record 60s voice or 30s video. No app needed. Features Mylo and Gigi mascots.</p>",
-            "local_html": f"<p>Shopping in {city} offers diverse options. Personalize with voice.</p>",
-            "faq_html": "<div><h4>How does it work?</h4><p>Record message online, link to NFC sticker, attach to gift.</p></div>"
+            "intro_html": f"<p>Finding {topic.lower()} in {city} requires personalization and thoughtful consideration. Whether you're shopping in the city centre or browsing local boutiques, adding a personal touch makes all the difference.</p>",
+            "problem_html": "<p>Generic gifts often lack emotional connection and fail to convey the depth of your feelings. Mass-produced items, while convenient, rarely capture the unique bond you share with the recipient.</p>",
+            "solution_html": f"<p>SayPlay's NFC stickers attach voice or video messages to any gift. Record up to 60 seconds of voice or 30 seconds of video. Recipients simply tap their phone - no app needed. The technology features adorable mascots Mylo and Gigi, making it approachable for all ages.</p>",
+            "local_html": f"<p>Shopping in {city} offers diverse options from independent retailers to high street favourites. Personalize any purchase with a voice message that preserves your authentic voice, laughter, and emotion - creating a keepsake that lasts forever.</p>",
+            "faq_html": "<div><h4>How does it work?</h4><p>Record your message online, link it to the NFC sticker, attach to your gift. When the recipient taps their phone to the sticker, your message plays instantly.</p><h4>Is it reusable?</h4><p>Yes, messages can be updated and changed as many times as you like.</p></div>"
         }
 
 # --- BLOCK 4: SOCIAL MEDIA GENERATOR ---
@@ -331,25 +348,25 @@ class SocialGenerator:
         
         # TikTok
         tt_prompt = f"TikTok script (60s) about '{topic}'. Hook in 3s. Emotional. [Visual cues]. British."
-        tt_script = self.brain.generate(tt_prompt) or f"[Hook] {topic}. Here's why it matters... [Product] SayPlay NFC stickers..."
+        tt_script = self.brain.generate(tt_prompt) or f"[Hook] {topic}. Here's why it matters... [Show emotion] The power of voice... [Product] SayPlay NFC stickers make it simple..."
         (output_path / "tiktok_script.txt").write_text(tt_script, encoding='utf-8')
         print(f"      ✅ TikTok")
         
         # Instagram
         ig_prompt = f"Instagram caption for '{topic}'. Aesthetic lifestyle. 15 hashtags. British."
-        ig_content = self.brain.generate(ig_prompt) or f"{topic} ✨\n\n#gifts #personalized #sayplay #voice"
+        ig_content = self.brain.generate(ig_prompt) or f"{topic} ✨\n\nThe power of voice in gift-giving.\n\n#gifts #personalized #sayplay #voice #meaningful #nfc #giftideas #thoughtful #voicemessage #uk #relationships #memory #keepsake #emotional #connection"
         (output_path / "instagram_post.txt").write_text(ig_content, encoding='utf-8')
         print(f"      ✅ Instagram")
         
         # X/Twitter
         x_prompt = f"3-tweet thread about '{topic}'. Hook, psychology, insight. <280 chars each."
-        x_content = self.brain.generate(x_prompt) or f"1/ {topic}\n\n2/ Psychology\n\n3/ Insight"
+        x_content = self.brain.generate(x_prompt) or f"1/ {topic} isn't about the object.\n\n2/ It's about preserving a voice, a laugh, a moment that might otherwise be forgotten.\n\n3/ Voice messages activate the same neural pathways as being together. That's the science of connection."
         (output_path / "twitter_thread.txt").write_text(x_content, encoding='utf-8')
         print(f"      ✅ Twitter/X")
         
         # Pinterest
         p_prompt = f"Pinterest description for '{topic}'. Visual, aesthetic, inspirational."
-        p_content = self.brain.generate(p_prompt) or f"Beautiful {topic.lower()}. Preserve memories."
+        p_content = self.brain.generate(p_prompt) or f"Beautiful {topic.lower()} ideas. Preserve memories with voice messages. Thoughtful, emotional, lasting."
         (output_path / "pinterest_description.txt").write_text(p_content, encoding='utf-8')
         print(f"      ✅ Pinterest")
 
