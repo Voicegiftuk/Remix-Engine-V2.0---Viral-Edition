@@ -43,19 +43,21 @@ jobs:
       - name: Run SPME
         run: python spme_v1_engine.py
       
-      - name: Commit
+      - name: Commit to repo
         run: |
           git config --local user.email "bot@spme"
           git config --local user.name "SPME"
           git add website/ social_media_assets/ content_history.json
           git diff --quiet && git diff --staged --quiet || (git commit -m "SPME V1: Content update [skip ci]" && git push)
       
-      - name: Deploy
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      
+      - name: Deploy to Vercel (Direct)
         run: |
-          npm install --global vercel@latest
           cd website
-          mkdir -p .vercel
-          echo '{"orgId":"'$VERCEL_ORG_ID'","projectId":"'$VERCEL_PROJECT_ID'"}' > .vercel/project.json
+          
+          # Create Vercel config
           cat > vercel.json << 'EOF'
           {
             "version": 2,
@@ -71,7 +73,17 @@ jobs:
             ]
           }
           EOF
-          vercel deploy --prod --token=$VERCEL_TOKEN --yes
+          
+          # Create .vercel directory
+          mkdir -p .vercel
+          echo '{"projectId":"'$VERCEL_PROJECT_ID'","orgId":"'$VERCEL_ORG_ID'"}' > .vercel/project.json
+          
+          # Deploy WITHOUT Git integration
+          vercel deploy \
+            --prod \
+            --token=$VERCEL_TOKEN \
+            --yes \
+            --force
       
       - name: Notify
         if: success()
