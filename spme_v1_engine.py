@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-SAYPLAY MEDIA ENGINE (SPME) V1 - COMPLETE SYSTEM
-4 Blocks: Trend Intelligence + Editorial + SEO + Social + Visual + Podcasts
+SAYPLAY MEDIA ENGINE (SPME) V1 - WITH TITAN OBSERVATORY
+Real-time trend intelligence from 100 UK gift sources
 """
 import sys
 import os
@@ -13,6 +13,8 @@ import random
 import urllib.parse
 import shutil
 import subprocess
+import csv
+import time
 
 from dashboard_index_generator import DashboardIndexGenerator
 
@@ -31,6 +33,13 @@ except ImportError:
 
 import requests
 
+try:
+    from bs4 import BeautifulSoup
+    import feedparser
+    SCANNER_AVAILABLE = True
+except ImportError:
+    SCANNER_AVAILABLE = False
+
 # --- CONFIG ---
 class Config:
     GEMINI_MODEL = 'gemini-1.5-flash'
@@ -44,6 +53,122 @@ class Config:
         "buy now", "click here", "order today", "limited offer",
         "discount code", "add to cart", "purchase now", "sales team"
     ]
+    
+    # Trend Scanner
+    SCANNER_CSV = "sources_uk_gifts.csv"
+    SCANNER_SAMPLE_SIZE = 20  # Scan 20/100 sources per run
+    SCANNER_TIMEOUT = 5  # seconds per request
+
+# --- UNIVERSAL SCANNER (TITAN OBSERVATORY) ---
+class UniversalScanner:
+    """Scans 100 UK gift sources for real-time trends"""
+    
+    def __init__(self, csv_path):
+        self.csv_path = csv_path
+        self.found_trends = []
+
+    def scan(self):
+        print("\n📡 TITAN OBSERVATORY: Scanning trend sources...")
+        
+        if not os.path.exists(self.csv_path):
+            print(f"   ⚠️ CSV not found: {self.csv_path}")
+            return []
+        
+        if not SCANNER_AVAILABLE:
+            print(f"   ⚠️ Scanner libraries not available")
+            return []
+
+        # Load sources
+        try:
+            with open(self.csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                sources = list(reader)
+        except Exception as e:
+            print(f"   ⚠️ Error reading CSV: {e}")
+            return []
+        
+        # Random sample
+        selection = random.sample(sources, min(len(sources), Config.SCANNER_SAMPLE_SIZE))
+        print(f"   🔭 Scanning {len(selection)} random sources...")
+        
+        for site in selection:
+            stype = site.get('typ', 'blog')
+            url = site.get('url', '')
+            name = site.get('nazwa', '')
+            topic_hint = site.get('temat', 'gift ideas')
+
+            try:
+                # Social media - use signals from CSV
+                if stype == 'social' or any(x in url for x in ['tiktok', 'instagram', 'twitter', 'pinterest', 'youtube']):
+                    signal = f"{topic_hint} trending"
+                    self.found_trends.append({
+                        "topic": signal, 
+                        "source": name, 
+                        "type": "social_signal"
+                    })
+                    print(f"   📱 Social: {signal[:40]}")
+
+                # Reddit (via RSS)
+                elif 'reddit.com' in url:
+                    self._scan_reddit(url)
+
+                # RSS feeds
+                elif stype == 'katalog' or url.endswith('xml') or url.endswith('rss'):
+                    self._scan_rss(url, name)
+
+                # Blogs (HTML scraping)
+                else:
+                    self._scan_blog_html(url, name)
+                
+                # Small delay to be polite
+                time.sleep(random.uniform(0.5, 1.5))
+                
+            except Exception as e:
+                # Silently skip failed sources
+                pass
+
+        print(f"   ✅ Found {len(self.found_trends)} trends")
+        return self.found_trends
+
+    def _scan_rss(self, url, source_name):
+        try:
+            f = feedparser.parse(url)
+            for e in f.entries[:2]:  # Get 2 latest
+                if len(e.title) > 15:
+                    self.found_trends.append({
+                        "topic": e.title, 
+                        "source": source_name, 
+                        "type": "real_data"
+                    })
+                    print(f"   📰 RSS: {e.title[:40]}")
+        except:
+            pass
+
+    def _scan_reddit(self, url):
+        # Reddit RSS hack
+        if not url.endswith('.rss'): 
+            url = url.rstrip('/') + '/.rss'
+        self._scan_rss(url, "Reddit")
+
+    def _scan_blog_html(self, url, source_name):
+        try:
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+            r = requests.get(url, headers=headers, timeout=Config.SCANNER_TIMEOUT)
+            soup = BeautifulSoup(r.text, 'lxml')
+            
+            # Find article titles (h2, h3)
+            titles = soup.find_all(['h2', 'h3'], limit=3)
+            for t in titles:
+                text = t.get_text().strip()
+                if 15 < len(text) < 100:
+                    self.found_trends.append({
+                        "topic": text, 
+                        "source": source_name, 
+                        "type": "real_data"
+                    })
+                    print(f"   🖊️ Blog: {text[:40]}")
+        except:
+            pass
 
 # --- CMEL (Content Memory & Evolution Layer) ---
 class CMEL:
@@ -155,16 +280,15 @@ class CMEL:
             "last_id": self.data["global_id_counter"]
         }
 
-# --- BLOCK 1: TREND INTELLIGENCE ---
+# --- BLOCK 1: TREND INTELLIGENCE (WITH OBSERVATORY) ---
 class TrendIntelligence:
-    """Harvests topics from Reddit/Trends simulation"""
+    """Harvests topics from real-time scanner + fallback"""
     def __init__(self, brain):
         self.brain = brain
-
-    def harvest_trends(self, cmel: CMEL):
-        print("\n📡 BLOCK 1: Trend Intelligence")
+        self.scanner = UniversalScanner(Config.SCANNER_CSV)
         
-        base_topics = [
+        # Backup topics if scanner fails
+        self.backup_topics = [
             "Long distance relationship gifts",
             "Gifts for grandparents who have everything",
             "Meaningful wedding favors",
@@ -181,17 +305,36 @@ class TrendIntelligence:
             "Wedding vows preservation",
             "Birthday wishes that last forever"
         ]
+
+    def harvest_trends(self, cmel: CMEL):
+        print("\n📡 BLOCK 1: Trend Intelligence")
+        
+        # Try scanner first
+        scanned = self.scanner.scan()
         
         candidates = []
-        for topic in base_topics:
-            if not cmel.is_topic_exhausted(topic):
-                angle = self.brain.get_angle(topic)
-                candidates.append({"topic": topic, "angle": angle})
-                print(f"   ✅ {topic[:50]}")
+        
+        if scanned:
+            # Use real trends from scanner
+            print(f"   🎯 Processing {len(scanned)} scanned trends...")
+            for item in scanned:
+                topic = item['topic']
+                if not cmel.is_topic_exhausted(topic):
+                    angle = self.brain.get_angle(topic)
+                    candidates.append({"topic": topic, "angle": angle, "source": item.get('source', 'Unknown')})
+                    print(f"   ✅ {topic[:50]}")
+        else:
+            # Fallback to backup topics
+            print(f"   ⚠️ Scanner returned no results, using backup topics...")
+            for topic in self.backup_topics:
+                if not cmel.is_topic_exhausted(topic):
+                    angle = self.brain.get_angle(topic)
+                    candidates.append({"topic": topic, "angle": angle, "source": "backup"})
+                    print(f"   ✅ {topic[:50]}")
         
         random.shuffle(candidates)
         selected = candidates[:10]
-        print(f"   📊 Selected: {len(selected)} topics")
+        print(f"   📊 Selected: {len(selected)} topics for production")
         return selected
 
 # --- BLOCK 2: EDITORIAL ENGINE ---
@@ -246,25 +389,20 @@ JSON output:
             print(f"         ❌ No content returned")
             return False
         
-        # Check if it's valid dict
         if not isinstance(content, dict):
             print(f"         ❌ Not a dict")
             return False
         
-        # Check if has required keys
         if 'article_html' not in content:
             print(f"         ❌ Missing article_html")
             return False
         
-        # Get article content
         article_html = content.get('article_html', '')
         
-        # Length check - 1500 chars minimum
         if len(article_html) < 1500:
             print(f"         ❌ Too short ({len(article_html)} chars, need 1500+)")
             return False
         
-        # Forbidden words check - only in article_html
         article_lower = article_html.lower()
         for bad in Config.FORBIDDEN_WORDS:
             if bad in article_lower:
@@ -553,7 +691,7 @@ class ContentBrain:
 # --- MAIN ORCHESTRATOR ---
 async def main():
     print("\n" + "="*70)
-    print("🚀 SAYPLAY MEDIA ENGINE V1 - COMPLETE SYSTEM")
+    print("🚀 SAYPLAY MEDIA ENGINE V1 - WITH TITAN OBSERVATORY")
     print("="*70 + "\n")
     
     start_time = datetime.now()
@@ -699,7 +837,7 @@ async def main():
     duration = (datetime.now() - start_time).total_seconds()
     
     print(f"\n{'='*70}")
-    print("✅ SPME V1 COMPLETE")
+    print("✅ SPME V1 WITH OBSERVATORY COMPLETE")
     print(f"{'='*70}")
     print(f"📊 Generated:")
     print(f"   • SEO Pages: {stats['seo']}")
