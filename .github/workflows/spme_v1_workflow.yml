@@ -1,4 +1,4 @@
-name: SPME V1.3 Production (Vercel Fix)
+name: SPME V1.3 Production (Artifact Fix)
 
 on:
   schedule:
@@ -46,13 +46,25 @@ jobs:
       - name: Run SPME Engine
         run: python spme_v1_engine.py
       
+      # --- FIX: POPRAWIONE ŚCIEŻKI ARTIFACTÓW ---
+      - name: Upload Content Artifacts
+        if: always() # Zawsze wykonaj, nawet jak coś innego padnie
+        uses: actions/upload-artifact@v4
+        with:
+          name: SPME-Daily-Content
+          path: |
+            website/
+            social_media_assets/
+            content_history.json
+          retention-days: 5
+      # ------------------------------------------
+
       - name: Commit Content
         run: |
           git config --local user.email "bot@spme"
           git config --local user.name "SPME Bot"
           git add website/ social_media_assets/ content_history.json
           
-          # Commit and Push changes to GitHub Repository
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
@@ -66,15 +78,11 @@ jobs:
           npm install --global vercel@latest
           
           # CRITICAL FIX: Remove .git folder so Vercel treats this as a fresh upload
-          # instead of trying to verify git authorship permissions.
           rm -rf .git
           
           cd website
-          
-          # Manually create Vercel configuration to ensure correct targeting
           echo '{"version": 2}' > vercel.json
           mkdir -p .vercel
           echo '{"orgId":"'$VERCEL_ORG_ID'","projectId":"'$VERCEL_PROJECT_ID'"}' > .vercel/project.json
           
-          # Deploy using tokens
           vercel deploy --prod --token=$VERCEL_TOKEN --yes
