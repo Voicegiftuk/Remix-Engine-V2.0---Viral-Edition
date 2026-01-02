@@ -1,8 +1,8 @@
-name: SPME V1 Observatory
+name: SPME V1 Production Run
 
 on:
   schedule:
-    - cron: '0 10 * * *'
+    - cron: '0 8 * * *'
   workflow_dispatch:
 
 permissions:
@@ -11,6 +11,9 @@ permissions:
 env:
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
   GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+  TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+  PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
   VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -18,7 +21,7 @@ env:
   TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
 jobs:
-  generate-deploy:
+  run-production:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     
@@ -29,67 +32,29 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install deps
+      - name: Install Dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg jq
           pip install google-generativeai edge-tts requests beautifulsoup4 feedparser lxml
       
-      - name: Prepare
+      - name: Prepare Assets
         run: |
-          mkdir -p runtime_assets social_media_assets
-          [ -f "assets/music/Just tap.No app intro podkast sayplay.mp3" ] && cp "assets/music/Just tap.No app intro podkast sayplay.mp3" runtime_assets/ || true
-          [ -f "assets/music/Just tap.no app final podkast.mp3" ] && cp "assets/music/Just tap.no app final podkast.mp3" runtime_assets/ || true
+          mkdir -p website/assets social_media_assets
+          # Copy assets if they exist in repo
+          [ -d "assets/brand" ] && cp -r assets/brand/* website/assets/ || true
       
-      - name: Run SPME Observatory
+      - name: Run SPME Engine
         run: python spme_v1_engine.py
       
-      - name: Commit to repo
+      - name: Commit Content
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "GitHub Actions Bot"
+          git config --local user.email "bot@spme"
+          git config --local user.name "SPME Bot"
           git add website/ social_media_assets/ content_history.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "SPME Observatory: Content update [skip ci]" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "SPME Production Content [skip ci]" && git push)
       
-      - name: Deploy to Vercel (Fallback Strategy)
+      - name: Deploy to Vercel
         run: |
           npm install --global vercel@latest
           cd website
-          
-          # Vercel config
-          cat > vercel.json << 'EOF'
-          {
-            "version": 2,
-            "routes": [
-              {"src": "/", "dest": "/index.html"},
-              {"src": "/seo", "dest": "/seo/index.html"},
-              {"src": "/seo/", "dest": "/seo/index.html"},
-              {"src": "/blog", "dest": "/blog/index.html"},
-              {"src": "/blog/", "dest": "/blog/index.html"},
-              {"src": "/podcasts", "dest": "/podcasts/index.html"},
-              {"src": "/podcasts/", "dest": "/podcasts/index.html"},
-              {"src": "/(.*)", "dest": "/$1"}
-            ]
-          }
-          EOF
-          
-          # Try deployment (may fail, that's OK)
-          vercel deploy --prod --token=$VERCEL_TOKEN --yes --force 2>&1 | tee deploy.log || echo "⚠️ Vercel deploy failed (expected if team access issue)"
-          
-          # Check if successful
-          if grep -q "Production:" deploy.log; then
-            echo "✅ Vercel deployment successful"
-          else
-            echo "⚠️ Vercel deployment failed - content committed to GitHub"
-            echo "Manual deploy: cd website && vercel --prod"
-          fi
-      
-      - name: Notify
-        if: success()
-        run: |
-          TOTAL_SEO=$(jq '.content_log | map(select(.type == "seo")) | length' content_history.json 2>/dev/null || echo "0")
-          TOTAL_BLOG=$(jq '.content_log | map(select(.type == "blog")) | length' content_history.json 2>/dev/null || echo "0")
-          TOTAL_POD=$(jq '.content_log | map(select(.type == "podcast")) | length' content_history.json 2>/dev/null || echo "0")
-          
-          MESSAGE="🔭 SPME Observatory Complete!%0A%0ASEO: ${TOTAL_SEO}%0ABlog: ${TOTAL_BLOG}%0APodcasts: ${TOTAL_POD}%0A%0A✅ Content committed to GitHub%0A🌐 dashboard.sayplay.co.uk"
-          
-          [ -n "$TELEGRAM_BOT_TOKEN" ] && curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=${TELEGRAM_CHAT_ID}" -d "text=${MESSAGE}" || true
+          vercel deploy --prod --token=$VERCEL_TOKEN --yes
