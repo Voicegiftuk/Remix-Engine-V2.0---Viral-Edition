@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-SAYPLAY MEDIA ENGINE (SPME) V1 - WITH TITAN OBSERVATORY
-Real-time trend intelligence from 100 UK gift sources
+SAYPLAY MEDIA ENGINE (SPME) V1 - WITH TITAN OBSERVATORY + QUALITY FILTERS
+Real-time trend intelligence with spam/junk filtering
 """
 import sys
 import os
@@ -56,16 +56,66 @@ class Config:
     
     # Trend Scanner
     SCANNER_CSV = "sources_uk_gifts.csv"
-    SCANNER_SAMPLE_SIZE = 20  # Scan 20/100 sources per run
-    SCANNER_TIMEOUT = 5  # seconds per request
+    SCANNER_SAMPLE_SIZE = 20
+    SCANNER_TIMEOUT = 5
 
-# --- UNIVERSAL SCANNER (TITAN OBSERVATORY) ---
+# --- UNIVERSAL SCANNER (TITAN OBSERVATORY) + QUALITY FILTER ---
 class UniversalScanner:
-    """Scans 100 UK gift sources for real-time trends"""
+    """Scans 100 UK gift sources with spam/junk filtering"""
     
     def __init__(self, csv_path):
         self.csv_path = csv_path
         self.found_trends = []
+        
+        # SPAM/JUNK KEYWORDS BLACKLIST
+        self.junk_keywords = [
+            'oops', 'sorry', 'not found', '404', 'error', 'page not found',
+            '10% off', '20% off', '30% off', 'discount', 'sale', 'promo', 'coupon',
+            'shop now', 'buy now', 'order now', 'subscribe', 'get 10%', 'get 20%',
+            'sign up', 'newsletter', 'email us', 'follow us', 'join us',
+            'by product', 'by interest', 'by recipient', 'by type', 'by category',
+            'menu', 'navigation', 'search', 'filter', 'sort by', 'view all',
+            'trending trending', 'gift gift', 'ideas ideas',  # duplicate words
+            'lorem ipsum', 'test', 'example', 'demo',
+        ]
+        
+        # MINIMUM QUALITY REQUIREMENTS
+        self.min_words = 4  # "eco friendly gift wrapping" = 4 words
+        self.max_words = 12  # Too long = probably paragraph
+        self.min_length = 20  # Minimum characters
+
+    def _is_quality_topic(self, text: str) -> bool:
+        """Filter out spam, navigation, errors, promos"""
+        if not text or len(text) < self.min_length:
+            return False
+        
+        text_lower = text.lower().strip()
+        
+        # Check blacklist
+        for junk in self.junk_keywords:
+            if junk in text_lower:
+                return False
+        
+        # Word count check
+        words = text.split()
+        if len(words) < self.min_words or len(words) > self.max_words:
+            return False
+        
+        # Must contain gift-related keywords
+        gift_keywords = ['gift', 'present', 'keepsake', 'favor', 'favour', 'hamper', 
+                        'personalised', 'personalized', 'custom', 'bespoke', 'unique']
+        if not any(keyword in text_lower for keyword in gift_keywords):
+            return False
+        
+        # No excessive punctuation
+        if text.count('!') > 2 or text.count('?') > 2:
+            return False
+        
+        # No ALL CAPS
+        if text.isupper():
+            return False
+        
+        return True
 
     def scan(self):
         print("\n📡 TITAN OBSERVATORY: Scanning trend sources...")
@@ -78,7 +128,6 @@ class UniversalScanner:
             print(f"   ⚠️ Scanner libraries not available")
             return []
 
-        # Load sources
         try:
             with open(self.csv_path, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
@@ -87,7 +136,6 @@ class UniversalScanner:
             print(f"   ⚠️ Error reading CSV: {e}")
             return []
         
-        # Random sample
         selection = random.sample(sources, min(len(sources), Config.SCANNER_SAMPLE_SIZE))
         print(f"   🔭 Scanning {len(selection)} random sources...")
         
@@ -98,43 +146,40 @@ class UniversalScanner:
             topic_hint = site.get('temat', 'gift ideas')
 
             try:
-                # Social media - use signals from CSV
                 if stype == 'social' or any(x in url for x in ['tiktok', 'instagram', 'twitter', 'pinterest', 'youtube']):
-                    signal = f"{topic_hint} trending"
-                    self.found_trends.append({
-                        "topic": signal, 
-                        "source": name, 
-                        "type": "social_signal"
-                    })
-                    print(f"   📱 Social: {signal[:40]}")
+                    # Clean social signals (remove "trending" suffix)
+                    signal = topic_hint.replace(' trending', '').strip()
+                    
+                    if self._is_quality_topic(signal):
+                        self.found_trends.append({
+                            "topic": signal, 
+                            "source": name, 
+                            "type": "social_signal"
+                        })
+                        print(f"   📱 Social: {signal[:40]}")
 
-                # Reddit (via RSS)
                 elif 'reddit.com' in url:
                     self._scan_reddit(url)
 
-                # RSS feeds
                 elif stype == 'katalog' or url.endswith('xml') or url.endswith('rss'):
                     self._scan_rss(url, name)
 
-                # Blogs (HTML scraping)
                 else:
                     self._scan_blog_html(url, name)
                 
-                # Small delay to be polite
                 time.sleep(random.uniform(0.5, 1.5))
                 
             except Exception as e:
-                # Silently skip failed sources
                 pass
 
-        print(f"   ✅ Found {len(self.found_trends)} trends")
+        print(f"   ✅ Found {len(self.found_trends)} quality trends")
         return self.found_trends
 
     def _scan_rss(self, url, source_name):
         try:
             f = feedparser.parse(url)
-            for e in f.entries[:2]:  # Get 2 latest
-                if len(e.title) > 15:
+            for e in f.entries[:3]:  # Get 3 entries
+                if len(e.title) > 20 and self._is_quality_topic(e.title):
                     self.found_trends.append({
                         "topic": e.title, 
                         "source": source_name, 
@@ -145,7 +190,6 @@ class UniversalScanner:
             pass
 
     def _scan_reddit(self, url):
-        # Reddit RSS hack
         if not url.endswith('.rss'): 
             url = url.rstrip('/') + '/.rss'
         self._scan_rss(url, "Reddit")
@@ -156,11 +200,11 @@ class UniversalScanner:
             r = requests.get(url, headers=headers, timeout=Config.SCANNER_TIMEOUT)
             soup = BeautifulSoup(r.text, 'lxml')
             
-            # Find article titles (h2, h3)
-            titles = soup.find_all(['h2', 'h3'], limit=3)
+            # Find article titles
+            titles = soup.find_all(['h2', 'h3'], limit=8)  # Get more to filter
             for t in titles:
                 text = t.get_text().strip()
-                if 15 < len(text) < 100:
+                if 20 < len(text) < 100 and self._is_quality_topic(text):
                     self.found_trends.append({
                         "topic": text, 
                         "source": source_name, 
@@ -183,7 +227,6 @@ class CMEL:
                 with open(self.filepath, 'r', encoding='utf-8') as f:
                     loaded = json.load(f)
                     
-                    # MIGRATION: Old format to new format
                     if "content_log" not in loaded:
                         print("   🔄 Migrating old format to CMEL v1...")
                         
@@ -194,7 +237,6 @@ class CMEL:
                             "social_signals": {}
                         }
                         
-                        # Migrate old seo_pages
                         for page in loaded.get("seo_pages", []):
                             new_data["content_log"].append({
                                 "id": new_data["global_id_counter"],
@@ -206,7 +248,6 @@ class CMEL:
                             })
                             new_data["global_id_counter"] += 1
                         
-                        # Migrate old blog_posts
                         for post in loaded.get("blog_posts", []):
                             new_data["content_log"].append({
                                 "id": new_data["global_id_counter"],
@@ -218,7 +259,6 @@ class CMEL:
                             })
                             new_data["global_id_counter"] += 1
                         
-                        # Migrate old podcasts
                         for pod in loaded.get("podcasts", []):
                             new_data["content_log"].append({
                                 "id": new_data["global_id_counter"],
@@ -237,7 +277,6 @@ class CMEL:
             except Exception as e:
                 print(f"   ⚠️ Error loading: {e}")
         
-        # Fresh start
         return {
             "global_id_counter": 100,
             "knowledge_graph": [],
@@ -255,7 +294,6 @@ class CMEL:
         return self.data["global_id_counter"]
 
     def is_topic_exhausted(self, topic):
-        """Check if topic used >3 times"""
         count = sum(1 for item in self.data["content_log"] if item.get("topic") == topic)
         return count > 3
 
@@ -287,35 +325,32 @@ class TrendIntelligence:
         self.brain = brain
         self.scanner = UniversalScanner(Config.SCANNER_CSV)
         
-        # Backup topics if scanner fails
         self.backup_topics = [
-            "Long distance relationship gifts",
-            "Gifts for grandparents who have everything",
-            "Meaningful wedding favors",
-            "Baby shower messages that last",
-            "Comforting gifts for grief",
-            "Graduation keepsakes UK",
-            "First birthday time capsule ideas",
-            "Anniversary gifts beyond flowers",
-            "Retirement gifts with meaning",
-            "New parent survival gifts",
-            "Gifts for homesick students",
-            "Voice messages for military families",
-            "Memorial gifts for loss",
-            "Wedding vows preservation",
-            "Birthday wishes that last forever"
+            "Eco-friendly gift wrapping ideas UK",
+            "Personalised keepsake gifts for newborns",
+            "Memory preservation gifts for elderly parents",
+            "Voice message gifts for military families",
+            "Handwritten letter gifts for anniversaries",
+            "Time capsule gifts for first birthdays",
+            "Digital photo frame gifts for grandparents",
+            "Custom illustration gifts from photographs",
+            "Family recipe book personalised gifts",
+            "Engraved jewelry for milestone birthdays",
+            "Meaningful retirement gifts with memories",
+            "Graduation keepsake boxes UK",
+            "Wedding vow preservation gifts",
+            "Baby shower gifts that last forever",
+            "Comfort gifts for bereaved families"
         ]
 
     def harvest_trends(self, cmel: CMEL):
         print("\n📡 BLOCK 1: Trend Intelligence")
         
-        # Try scanner first
         scanned = self.scanner.scan()
         
         candidates = []
         
-        if scanned:
-            # Use real trends from scanner
+        if scanned and len(scanned) >= 5:
             print(f"   🎯 Processing {len(scanned)} scanned trends...")
             for item in scanned:
                 topic = item['topic']
@@ -324,8 +359,7 @@ class TrendIntelligence:
                     candidates.append({"topic": topic, "angle": angle, "source": item.get('source', 'Unknown')})
                     print(f"   ✅ {topic[:50]}")
         else:
-            # Fallback to backup topics
-            print(f"   ⚠️ Scanner returned no results, using backup topics...")
+            print(f"   ⚠️ Scanner returned {len(scanned)} results, using backup topics...")
             for topic in self.backup_topics:
                 if not cmel.is_topic_exhausted(topic):
                     angle = self.brain.get_angle(topic)
@@ -382,6 +416,7 @@ JSON output:
             
             print(f"      ⚠️  Failed validation")
         
+        print(f"      🚨 Using emergency template")
         return self._emergency_blog(topic)
 
     def _validate(self, content):
@@ -484,25 +519,21 @@ class SocialGenerator:
         
         output_path.mkdir(parents=True, exist_ok=True)
         
-        # TikTok
         tt_prompt = f"TikTok script (60s) about '{topic}'. Hook in 3s. Emotional. [Visual cues]. British."
         tt_script = self.brain.generate(tt_prompt) or f"[Hook] {topic}. Here's why it matters... [Show emotion] The power of voice... [Product] SayPlay NFC stickers make it simple..."
         (output_path / "tiktok_script.txt").write_text(tt_script, encoding='utf-8')
         print(f"      ✅ TikTok")
         
-        # Instagram
         ig_prompt = f"Instagram caption for '{topic}'. Aesthetic lifestyle. 15 hashtags. British."
         ig_content = self.brain.generate(ig_prompt) or f"{topic} ✨\n\nThe power of voice in gift-giving.\n\n#gifts #personalized #sayplay #voice #meaningful #nfc #giftideas #thoughtful #voicemessage #uk #relationships #memory #keepsake #emotional #connection"
         (output_path / "instagram_post.txt").write_text(ig_content, encoding='utf-8')
         print(f"      ✅ Instagram")
         
-        # X/Twitter
         x_prompt = f"3-tweet thread about '{topic}'. Hook, psychology, insight. <280 chars each."
         x_content = self.brain.generate(x_prompt) or f"1/ {topic} isn't about the object.\n\n2/ It's about preserving a voice, a laugh, a moment that might otherwise be forgotten.\n\n3/ Voice messages activate the same neural pathways as being together. That's the science of connection."
         (output_path / "twitter_thread.txt").write_text(x_content, encoding='utf-8')
         print(f"      ✅ Twitter/X")
         
-        # Pinterest
         p_prompt = f"Pinterest description for '{topic}'. Visual, aesthetic, inspirational."
         p_content = self.brain.generate(p_prompt) or f"Beautiful {topic.lower()} ideas. Preserve memories with voice messages. Thoughtful, emotional, lasting."
         (output_path / "pinterest_description.txt").write_text(p_content, encoding='utf-8')
@@ -635,7 +666,7 @@ class AudioStudio:
         
         return final
 
-# --- AI BRAIN ---
+# --- AI BRAIN (WITH DEBUG LOGGING) ---
 class ContentBrain:
     def __init__(self, api_key):
         self.gemini_key = api_key
@@ -645,35 +676,51 @@ class ContentBrain:
             genai.configure(api_key=api_key)
 
     def get_angle(self, topic):
-        """AI determines unique angle"""
         prompt = f"Give ONE unique emotional angle for '{topic}'. Example: 'The pain of forgetting a voice'. Output ONLY the angle."
         return self.generate(prompt) or "Emotional value of voice"
 
     def generate(self, prompt, json_mode=False):
         res = None
         
-        # Try Groq first (free)
+        # Try Groq first
         if self.groq_key:
             try:
                 r = requests.post(
                     Config.GROQ_ENDPOINT,
                     headers={'Authorization': f'Bearer {self.groq_key}'},
-                    json={'model': Config.GROQ_MODEL, 'messages': [{'role': 'user', 'content': prompt}]},
-                    timeout=30
+                    json={
+                        'model': Config.GROQ_MODEL, 
+                        'messages': [{'role': 'user', 'content': prompt}],
+                        'temperature': 0.8,
+                        'max_tokens': 2000
+                    },
+                    timeout=45
                 )
                 if r.status_code == 200:
                     res = r.json()['choices'][0]['message']['content']
-            except:
-                pass
+                    print(f"         🤖 Groq: {len(res)} chars")
+                elif r.status_code == 429:
+                    print(f"         ⚠️ Groq rate limit")
+                else:
+                    print(f"         ⚠️ Groq error: {r.status_code}")
+            except Exception as e:
+                print(f"         ⚠️ Groq failed: {str(e)[:50]}")
         
         # Try Gemini
         if not res and self.gemini_key and GEMINI_AVAILABLE:
             try:
                 model = genai.GenerativeModel(Config.GEMINI_MODEL)
-                response = model.generate_content(prompt)
+                response = model.generate_content(
+                    prompt,
+                    generation_config={
+                        'temperature': 0.8,
+                        'max_output_tokens': 2000
+                    }
+                )
                 res = response.text
-            except:
-                pass
+                print(f"         🤖 Gemini: {len(res)} chars")
+            except Exception as e:
+                print(f"         ⚠️ Gemini failed: {str(e)[:50]}")
         
         if json_mode and res:
             try:
@@ -683,7 +730,8 @@ class ContentBrain:
                 elif '```' in clean:
                     clean = clean.split('```')[1].split('```')[0]
                 return json.loads(clean.strip())
-            except:
+            except Exception as e:
+                print(f"         ⚠️ JSON parse failed: {str(e)[:50]}")
                 return None
         
         return res
@@ -696,7 +744,6 @@ async def main():
     
     start_time = datetime.now()
     
-    # Setup
     web_dir = Path("website")
     social_dir = Path("social_media_assets")
     assets_dir = web_dir / "assets"
@@ -707,7 +754,6 @@ async def main():
     social_dir.mkdir(parents=True, exist_ok=True)
     assets_dir.mkdir(parents=True, exist_ok=True)
     
-    # Copy assets
     print("📂 Syncing assets...")
     if Path("assets/brand").exists():
         for f in Path("assets/brand").glob("*"):
@@ -715,7 +761,6 @@ async def main():
                 shutil.copy(f, assets_dir / f.name)
                 print(f"   ✅ {f.name}")
     
-    # Initialize modules
     print("\n🧠 Initializing modules...")
     cmel = CMEL(Path("content_history.json"))
     brain = ContentBrain(os.getenv('GEMINI_API_KEY'))
@@ -732,7 +777,6 @@ async def main():
     
     print(f"   ✅ CMEL loaded (ID: {cmel.get_stats()['last_id']})")
     
-    # Harvest topics
     topics = trend_module.harvest_trends(cmel)
     
     if not topics:
@@ -741,7 +785,6 @@ async def main():
     
     cities = ['London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 'Bristol', 'Edinburgh', 'Liverpool']
     
-    # Production loop
     print(f"\n{'='*70}")
     print("⚙️  CONTENT PRODUCTION CYCLE")
     print(f"{'='*70}")
@@ -753,10 +796,8 @@ async def main():
         
         print(f"\n[{idx}/{len(topics)}] {topic}")
         
-        # Image
         img = visual.get_image(topic)
         
-        # Blog (Block 2)
         blog_data = editorial_module.create_blog_post(topic, angle)
         if blog_data:
             slug = "".join(c for c in topic.lower() if c.isalnum() or c == '-')[:40]
@@ -765,10 +806,8 @@ async def main():
             designer.build_page('blog', blog_data, web_dir / 'blog' / blog_file, img)
             cmel.register_content('blog', topic, angle, blog_file)
             
-            # Social assets for blog
             social_module.generate_assets(topic, angle, social_dir / f"{slug}_social")
         
-        # SEO Page (Block 3)
         seo_data = seo_module.create_seo_page(topic, city)
         if seo_data:
             slug = "".join(c for c in topic.lower() if c.isalnum() or c == '-')[:40]
@@ -777,7 +816,6 @@ async def main():
             designer.build_page('seo', seo_data, web_dir / 'seo' / seo_file, img)
             cmel.register_content('seo', topic, angle, seo_file)
         
-        # Podcast
         script_prompt = f"Podcast script about {topic}. 800 words. Conversational British. Intro, Story, Insight, Outro."
         script = brain.generate(script_prompt)
         
@@ -791,7 +829,6 @@ async def main():
                 cmel.register_content('podcast', topic, angle, podcast_path.name)
                 print(f"      ✅ Podcast")
     
-    # Finalize
     print(f"\n{'='*70}")
     print("📊 FINALIZING")
     print(f"{'='*70}\n")
@@ -799,7 +836,6 @@ async def main():
     cmel.save()
     shutil.copy(Path("content_history.json"), assets_dir / "content_history.json")
     
-    # Legacy format for dashboard
     legacy = {"seo_pages": [], "blog_posts": [], "podcasts": []}
     
     for item in cmel.data["content_log"]:
@@ -828,7 +864,6 @@ async def main():
     
     stats = cmel.get_stats()
     
-    # Generate dashboards
     dashboard.generate_main_dashboard(web_dir / 'index.html', stats)
     dashboard.generate_seo_index(web_dir / 'seo' / 'index.html', legacy['seo_pages'])
     dashboard.generate_blog_index(web_dir / 'blog' / 'index.html', legacy['blog_posts'])
