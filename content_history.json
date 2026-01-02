@@ -1,5 +1,5 @@
 {
-  "global_id_counter": 137,
+  "global_id_counter": 157,
   "knowledge_graph": [],
   "content_log": [
     {
@@ -945,6 +945,166 @@
       "topic": "gaming tech trending",
       "angle": "Emotional value of voice",
       "filename": "gamingtechtrending-edinburgh.html"
+    },
+    {
+      "id": 138,
+      "date": "2026-01-02T10:11:49.352439",
+      "type": "blog",
+      "topic": "100% Silk Pillowcases",
+      "angle": "Emotional value of voice",
+      "filename": "100silkpillowcases.html"
+    },
+    {
+      "id": 139,
+      "date": "2026-01-02T10:11:49.837864",
+      "type": "seo",
+      "topic": "100% Silk Pillowcases",
+      "angle": "Emotional value of voice",
+      "filename": "100silkpillowcases-liverpool.html"
+    },
+    {
+      "id": 140,
+      "date": "2026-01-02T10:11:50.208353",
+      "type": "blog",
+      "topic": "trending makers trending",
+      "angle": "Emotional value of voice",
+      "filename": "trendingmakerstrending.html"
+    },
+    {
+      "id": 141,
+      "date": "2026-01-02T10:11:50.687587",
+      "type": "seo",
+      "topic": "trending makers trending",
+      "angle": "Emotional value of voice",
+      "filename": "trendingmakerstrending-glasgow.html"
+    },
+    {
+      "id": 142,
+      "date": "2026-01-02T10:11:51.057476",
+      "type": "blog",
+      "topic": "home decor trending",
+      "angle": "Emotional value of voice",
+      "filename": "homedecortrending.html"
+    },
+    {
+      "id": 143,
+      "date": "2026-01-02T10:11:51.518770",
+      "type": "seo",
+      "topic": "home decor trending",
+      "angle": "Emotional value of voice",
+      "filename": "homedecortrending-leeds.html"
+    },
+    {
+      "id": 144,
+      "date": "2026-01-02T10:11:51.821175",
+      "type": "blog",
+      "topic": "quirky unique trending",
+      "angle": "Emotional value of voice",
+      "filename": "quirkyuniquetrending.html"
+    },
+    {
+      "id": 145,
+      "date": "2026-01-02T10:11:52.087719",
+      "type": "seo",
+      "topic": "quirky unique trending",
+      "angle": "Emotional value of voice",
+      "filename": "quirkyuniquetrending-bristol.html"
+    },
+    {
+      "id": 146,
+      "date": "2026-01-02T10:11:52.365543",
+      "type": "blog",
+      "topic": "Personalised Secret Message Heart Birthstone Bracelet",
+      "angle": "Emotional value of voice",
+      "filename": "personalisedsecretmessageheartbirthstone.html"
+    },
+    {
+      "id": 147,
+      "date": "2026-01-02T10:11:52.617397",
+      "type": "seo",
+      "topic": "Personalised Secret Message Heart Birthstone Bracelet",
+      "angle": "Emotional value of voice",
+      "filename": "personalisedsecretmessageheartbirthstone-leeds.html"
+    },
+    {
+      "id": 148,
+      "date": "2026-01-02T10:11:52.919399",
+      "type": "blog",
+      "topic": "Christmas Gift Ideas (Unique Picks for Every Budget \ud83c\udf84)",
+      "angle": "Emotional value of voice",
+      "filename": "christmasgiftideasuniquepicksforeverybud.html"
+    },
+    {
+      "id": 149,
+      "date": "2026-01-02T10:11:53.165169",
+      "type": "seo",
+      "topic": "Christmas Gift Ideas (Unique Picks for Every Budget \ud83c\udf84)",
+      "angle": "Emotional value of voice",
+      "filename": "christmasgiftideasuniquepicksforeverybud-birmingham.html"
+    },
+    {
+      "id": 150,
+      "date": "2026-01-02T10:11:53.579792",
+      "type": "blog",
+      "topic": "Subscribe to our Newsletter",
+      "angle": "Emotional value of voice",
+      "filename": "subscribetoournewsletter.html"
+    },
+    {
+      "id": 151,
+      "date": "2026-01-02T10:11:53.824556",
+      "type": "seo",
+      "topic": "Subscribe to our Newsletter",
+      "angle": "Emotional value of voice",
+      "filename": "subscribetoournewsletter-london.html"
+    },
+    {
+      "id": 152,
+      "date": "2026-01-02T10:11:54.099774",
+      "type": "blog",
+      "topic": "...try searching for a product instead.",
+      "angle": "Emotional value of voice",
+      "filename": "trysearchingforaproductinstead.html"
+    },
+    {
+      "id": 153,
+      "date": "2026-01-02T10:11:54.339191",
+      "type": "seo",
+      "topic": "...try searching for a product instead.",
+      "angle": "Emotional value of voice",
+      "filename": "trysearchingforaproductinstead-london.html"
+    },
+    {
+      "id": 154,
+      "date": "2026-01-02T10:11:54.619077",
+      "type": "blog",
+      "topic": "gadget demos trending",
+      "angle": "Emotional value of voice",
+      "filename": "gadgetdemostrending.html"
+    },
+    {
+      "id": 155,
+      "date": "2026-01-02T10:11:54.851502",
+      "type": "seo",
+      "topic": "gadget demos trending",
+      "angle": "Emotional value of voice",
+      "filename": "gadgetdemostrending-manchester.html"
+    },
+    {
+      "id": 156,
+      "date": "2026-01-02T10:11:55.293654",
+      "type": "blog",
+      "topic": "gift inspiration trending",
+      "angle": "Emotional value of voice",
+      "filename": "giftinspirationtrending.html"
+    },
+    {
+      "id": 157,
+      "date": "2026-01-02T10:11:55.534142",
+      "type": "seo",
+      "topic": "gift inspiration trending",
+      "angle": "Emotional value of voice",
+      "filename": "giftinspirationtrending-manchester.html"
     }
   ],
   "social_signals": {}
