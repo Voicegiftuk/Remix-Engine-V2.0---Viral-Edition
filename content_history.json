@@ -1,5 +1,4 @@
 {
-  "global_id_counter": 177,
   "knowledge_graph": [],
   "content_log": [
     {
@@ -1265,7 +1264,29 @@
       "topic": "Baby shower gifts that last forever",
       "angle": "Emotional value of voice",
       "filename": "babyshowergiftsthatlastforever-london.html"
+    },
+    {
+      "id": 178,
+      "type": "blog",
+      "topic": "Personalized Gifts",
+      "file": "personalizedgifts.html",
+      "date": "2026-01-02 11:16:31.488251"
+    },
+    {
+      "id": 179,
+      "type": "seo",
+      "topic": "Personalized Gifts",
+      "file": "personalizedgifts-london.html",
+      "date": "2026-01-02 11:16:31.545618"
+    },
+    {
+      "id": 180,
+      "type": "podcast",
+      "topic": "Personalized Gifts",
+      "file": "personalizedgifts.mp3",
+      "date": "2026-01-02 11:16:33.275029"
     }
   ],
-  "social_signals": {}
+  "social_signals": {},
+  "id_counter": 180
 }
