@@ -1,0 +1,81 @@
+<?xml version="1.0" ?>
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+  <channel>
+    <title>SayPlay Gift Guide Podcast</title>
+    <description>Your daily guide to finding perfect personalized gifts with expert tips and ideas.</description>
+    <link>https://dashboard.sayplay.co.uk</link>
+    <language>en-GB</language>
+    <itunes:author>SayPlay - VoiceGift UK</itunes:author>
+    <itunes:summary>Expert gift-giving advice and inspiration</itunes:summary>
+    <item>
+      <title>Great Christmas Gifts Dad Will Actually Use</title>
+      <description>Episode 1: Great Christmas Gifts Dad Will Actually Use</description>
+      <enclosure url="https://dashboard.sayplay.co.uk/podcasts/episode-01-great-christmas-gifts-dad-will.mp3" length="1111968" type="audio/mpeg"/>
+      <itunes:duration>370</itunes:duration>
+      <pubDate>Tue, 06 Jan 2026 10:35:53 GMT</pubDate>
+    </item>
+    <item>
+      <title>Romantic Anniversary Gifts Your Wife Will Treasure</title>
+      <description>Episode 2: Romantic Anniversary Gifts Your Wife Will Treasure</description>
+      <enclosure url="https://dashboard.sayplay.co.uk/podcasts/episode-02-romantic-anniversary-gifts-you.mp3" length="1118160" type="audio/mpeg"/>
+      <itunes:duration>372</itunes:duration>
+      <pubDate>Tue, 06 Jan 2026 10:35:53 GMT</pubDate>
+    </item>
+    <item>
+      <title>Romantic Valentine Gifts He Will Actually Want</title>
+      <description>Episode 3: Romantic Valentine Gifts He Will Actually Want</description>
+      <enclosure url="https://dashboard.sayplay.co.uk/podcasts/episode-03-romantic-valentine-gifts-he-wi.mp3" length="1114848" type="audio/mpeg"/>
+      <itunes:duration>371</itunes:duration>
+      <pubDate>Tue, 06 Jan 2026 10:35:53 GMT</pubDate>
+    </item>
+    <item>
+      <title>Romantic Birthday Gifts for Your Wife</title>
+      <description>Episode 4: Romantic Birthday Gifts for Your Wife</description>
+      <enclosure url="https://dashboard.sayplay.co.uk/podcasts/episode-04-romantic-birthday-gifts-for-yo.mp3" length="1110816" type="audio/mpeg"/>
+      <itunes:duration>370</itunes:duration>
+      <pubDate>Tue, 06 Jan 2026 10:35:53 GMT</pubDate>
+    </item>
+    <item>
+      <title>Heartfelt Mothers Day Gifts She Will Love</title>
+      <description>Episode 5: Heartfelt Mothers Day Gifts She Will Love</description>
+      <enclosure url="https://dashboard.sayplay.co.uk/podcasts/episode-05-heartfelt-mothers-day-gifts-sh.mp3" length="1113552" type="audio/mpeg"/>
+      <itunes:duration>371</itunes:duration>
+      <pubDate>Tue, 06 Jan 2026 10:35:53 GMT</pubDate>
+    </item>
+    <item>
+      <title>Thoughtful Birthday Gifts Your Dad Will Love</title>
+      <description>Episode 6: Thoughtful Birthday Gifts Your Dad Will Love</description>
+      <enclosure url="https://dashboard.sayplay.co.uk/podcasts/episode-06-thoughtful-birthday-gifts-your.mp3" length="1111680" type="audio/mpeg"/>
+      <itunes:duration>370</itunes:duration>
+      <pubDate>Tue, 06 Jan 2026 10:35:53 GMT</pubDate>
+    </item>
+    <item>
+      <title>Unique Wedding Gifts Couples Will Treasure</title>
+      <description>Episode 7: Unique Wedding Gifts Couples Will Treasure</description>
+      <enclosure url="https://dashboard.sayplay.co.uk/podcasts/episode-07-unique-wedding-gifts-couples-w.mp3" length="1112688" type="audio/mpeg"/>
+      <itunes:duration>370</itunes:duration>
+      <pubDate>Tue, 06 Jan 2026 10:35:53 GMT</pubDate>
+    </item>
+    <item>
+      <title>Best Fathers Day Presents for Every Dad</title>
+      <description>Episode 8: Best Fathers Day Presents for Every Dad</description>
+      <enclosure url="https://dashboard.sayplay.co.uk/podcasts/episode-08-best-fathers-day-presents-for-.mp3" length="1109664" type="audio/mpeg"/>
+      <itunes:duration>369</itunes:duration>
+      <pubDate>Tue, 06 Jan 2026 10:35:53 GMT</pubDate>
+    </item>
+    <item>
+      <title>Perfect Christmas Gifts for Mum</title>
+      <description>Episode 9: Perfect Christmas Gifts for Mum</description>
+      <enclosure url="https://dashboard.sayplay.co.uk/podcasts/episode-09-perfect-christmas-gifts-for-mu.mp3" length="1108944" type="audio/mpeg"/>
+      <itunes:duration>369</itunes:duration>
+      <pubDate>Tue, 06 Jan 2026 10:35:53 GMT</pubDate>
+    </item>
+    <item>
+      <title>Perfect Birthday Gifts for Mum 2025</title>
+      <description>Episode 10: Perfect Birthday Gifts for Mum 2025</description>
+      <enclosure url="https://dashboard.sayplay.co.uk/podcasts/episode-10-perfect-birthday-gifts-for-mum.mp3" length="1114704" type="audio/mpeg"/>
+      <itunes:duration>371</itunes:duration>
+      <pubDate>Tue, 06 Jan 2026 10:35:53 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
