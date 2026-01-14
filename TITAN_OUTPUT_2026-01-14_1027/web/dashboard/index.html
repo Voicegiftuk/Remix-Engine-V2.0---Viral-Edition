@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SayPlay Content Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 25px; padding: 50px; box-shadow: 0 25px 70px rgba(0,0,0,0.3); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 50px; padding-bottom: 25px; border-bottom: 3px solid #e0e0e0; }
+        .logo { font-size: 56px; font-weight: 800; color: #667eea; }
+        .logo span { color: #FFD700; }
+        .date { color: #718096; font-size: 18px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 25px; margin: 50px 0; }
+        .stat { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 35px; border-radius: 20px; text-align: center; transition: transform 0.3s; }
+        .stat:hover { transform: translateY(-8px); }
+        .stat i { font-size: 56px; margin-bottom: 20px; }
+        .stat-number { font-size: 64px; font-weight: 900; margin: 15px 0; }
+        .stat-label { font-size: 18px; opacity: 0.95; }
+        .section { margin: 60px 0; }
+        .section-title { color: #2d3748; font-size: 36px; font-weight: 900; margin-bottom: 30px; display: flex; align-items: center; gap: 15px; }
+        .quick-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; }
+        .quick-link { background: #f7fafc; padding: 30px; border-radius: 20px; border: 2px solid #e0e0e0; text-decoration: none; display: block; transition: all 0.3s; }
+        .quick-link:hover { border-color: #667eea; transform: translateY(-5px); box-shadow: 0 12px 30px rgba(102, 126, 234, 0.15); }
+        .quick-link h3 { color: #2d3748; font-size: 22px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+        .quick-link p { color: #718096; font-size: 16px; margin: 0; }
+        @media (max-width: 768px) { .container { padding: 30px 20px; } .header { flex-direction: column; gap: 20px; text-align: center; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Say<span>Play</span> Dashboard</div>
+            <div class="date">January 14, 2026 10:35 UTC</div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <i class="fas fa-file-alt"></i>
+                <div class="stat-number">10</div>
+                <div class="stat-label">Blog Articles</div>
+            </div>
+            <div class="stat">
+                <i class="fas fa-microphone-alt"></i>
+                <div class="stat-number">10</div>
+                <div class="stat-label">Podcasts</div>
+            </div>
+            <div class="stat">
+                <i class="fas fa-search-location"></i>
+                <div class="stat-number">100</div>
+                <div class="stat-label">SEO Pages</div>
+            </div>
+            <div class="stat">
+                <i class="fas fa-check-circle"></i>
+                <div class="stat-number">✓</div>
+                <div class="stat-label">System Active</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">
+                <i class="fas fa-link"></i>
+                Quick Links
+            </h2>
+            <div class="quick-links">
+                <a href="/blog" class="quick-link">
+                    <h3><i class="fas fa-newspaper"></i> View All Articles</h3>
+                    <p>10 professional blog posts</p>
+                </a>
+                <a href="/seo" class="quick-link">
+                    <h3><i class="fas fa-map-marked-alt"></i> View SEO Pages</h3>
+                    <p>100 location-based landing pages</p>
+                </a>
+                <a href="/podcast.xml" class="quick-link">
+                    <h3><i class="fas fa-rss"></i> Podcast RSS Feed</h3>
+                    <p>10 episodes available</p>
+                </a>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">
+                <i class="fas fa-chart-line"></i>
+                Performance
+            </h2>
+            <div style="background: #f7fafc; padding: 40px; border-radius: 20px;">
+                <p style="font-size: 18px; color: #4a5568; line-height: 1.8; margin: 0;">
+                    <strong>Content generated:</strong> 10 unique articles with professional images<br>
+                    <strong>Podcasts created:</strong> 10 episodes (3-5 min each)<br>
+                    <strong>SEO coverage:</strong> 100 location-specific pages<br>
+                    <strong>Total files:</strong> 123<br>
+                    <strong>Generation time:</strong> 7 minutes
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
