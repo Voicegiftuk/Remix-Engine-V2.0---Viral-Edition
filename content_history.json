@@ -2083,8 +2083,29 @@
       "topic": "Personalized Gifts",
       "file": "personalizedgifts.mp3",
       "date": "2026-02-07 08:29:25.864114"
+    },
+    {
+      "id": 295,
+      "type": "blog",
+      "topic": "Personalized Gifts",
+      "file": "personalizedgifts.html",
+      "date": "2026-02-08 08:31:03.046175"
+    },
+    {
+      "id": 296,
+      "type": "seo",
+      "topic": "Personalized Gifts",
+      "file": "personalizedgifts-london.html",
+      "date": "2026-02-08 08:31:03.087465"
+    },
+    {
+      "id": 297,
+      "type": "podcast",
+      "topic": "Personalized Gifts",
+      "file": "personalizedgifts.mp3",
+      "date": "2026-02-08 08:31:03.399511"
     }
   ],
   "social_signals": {},
-  "id_counter": 294
+  "id_counter": 297
 }
