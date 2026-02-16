@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gift Guide Blog | SayPlay</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.3);
+        }
+        .logo {
+            font-size: 56px;
+            font-weight: 800;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .logo span { color: #FFD700; }
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            font-size: 42px;
+            margin-bottom: 15px;
+            font-weight: 900;
+        }
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            font-size: 20px;
+            margin-bottom: 60px;
+        }
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 30px;
+        }
+        .article-card {
+            background: #f7fafc;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: block;
+        }
+        .article-card:hover {
+            border-color: #667eea;
+            transform: translateY(-8px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.2);
+        }
+        .article-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            position: relative;
+        }
+        .episode-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.25);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .article-card h3 {
+            color: white;
+            font-size: 24px;
+            margin: 0;
+            font-weight: 800;
+            line-height: 1.3;
+        }
+        .article-body {
+            padding: 30px;
+        }
+        .article-meta {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            font-size: 15px;
+            color: #718096;
+        }
+        .article-meta span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .article-excerpt {
+            color: #4a5568;
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+        .read-more {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #667eea;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        @media (max-width: 768px) {
+            .container { padding: 30px 20px; }
+            .articles-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Say<span>Play</span></div>
+        <h1><i class="fas fa-newspaper"></i> Gift Guide Blog</h1>
+        <p class="subtitle">Expert tips and ideas for perfect personalized gifts</p>
+        
+        <div class="articles-grid">
+            <a href="/blog/beautiful-valentine-gifts-she-will-adore.html" class="article-card">
+                <div class="article-header">
+                    <div class="episode-badge">Episode 1</div>
+                    <h3>Beautiful Valentine Gifts She Will Adore</h3>
+                </div>
+                <div class="article-body">
+                    <div class="article-meta">
+                        <span><i class="fas fa-tag"></i> Valentines</span>
+                        <span><i class="far fa-clock"></i> 8 min read</span>
+                    </div>
+                    <p class="article-excerpt">Discover the best valentine gifts for her that create lasting memories. Learn how to choose meaningful gifts and add a personal touch.</p>
+                    <span class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            <a href="/blog/perfect-birthday-gifts-for-mum-2025.html" class="article-card">
+                <div class="article-header">
+                    <div class="episode-badge">Episode 2</div>
+                    <h3>Perfect Birthday Gifts for Mum 2025</h3>
+                </div>
+                <div class="article-body">
+                    <div class="article-meta">
+                        <span><i class="fas fa-tag"></i> Birthday</span>
+                        <span><i class="far fa-clock"></i> 8 min read</span>
+                    </div>
+                    <p class="article-excerpt">Discover the best birthday gifts for mum that create lasting memories. Learn how to choose meaningful gifts and add a personal touch.</p>
+                    <span class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            <a href="/blog/romantic-anniversary-gifts-your-wife-will-treasure.html" class="article-card">
+                <div class="article-header">
+                    <div class="episode-badge">Episode 3</div>
+                    <h3>Romantic Anniversary Gifts Your Wife Will Treasure</h3>
+                </div>
+                <div class="article-body">
+                    <div class="article-meta">
+                        <span><i class="fas fa-tag"></i> Anniversary</span>
+                        <span><i class="far fa-clock"></i> 8 min read</span>
+                    </div>
+                    <p class="article-excerpt">Discover the best anniversary gifts for wife that create lasting memories. Learn how to choose meaningful gifts and add a personal touch.</p>
+                    <span class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            <a href="/blog/heartfelt-mothers-day-gifts-she-will-love.html" class="article-card">
+                <div class="article-header">
+                    <div class="episode-badge">Episode 4</div>
+                    <h3>Heartfelt Mothers Day Gifts She Will Love</h3>
+                </div>
+                <div class="article-body">
+                    <div class="article-meta">
+                        <span><i class="fas fa-tag"></i> Mothers Day</span>
+                        <span><i class="far fa-clock"></i> 8 min read</span>
+                    </div>
+                    <p class="article-excerpt">Discover the best mothers day gift ideas that create lasting memories. Learn how to choose meaningful gifts and add a personal touch.</p>
+                    <span class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            <a href="/blog/unique-wedding-gifts-couples-will-treasure.html" class="article-card">
+                <div class="article-header">
+                    <div class="episode-badge">Episode 5</div>
+                    <h3>Unique Wedding Gifts Couples Will Treasure</h3>
+                </div>
+                <div class="article-body">
+                    <div class="article-meta">
+                        <span><i class="fas fa-tag"></i> Wedding</span>
+                        <span><i class="far fa-clock"></i> 8 min read</span>
+                    </div>
+                    <p class="article-excerpt">Discover the best wedding gifts for couples that create lasting memories. Learn how to choose meaningful gifts and add a personal touch.</p>
+                    <span class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            <a href="/blog/great-christmas-gifts-dad-will-actually-use.html" class="article-card">
+                <div class="article-header">
+                    <div class="episode-badge">Episode 6</div>
+                    <h3>Great Christmas Gifts Dad Will Actually Use</h3>
+                </div>
+                <div class="article-body">
+                    <div class="article-meta">
+                        <span><i class="fas fa-tag"></i> Christmas</span>
+                        <span><i class="far fa-clock"></i> 8 min read</span>
+                    </div>
+                    <p class="article-excerpt">Discover the best christmas gifts for dad that create lasting memories. Learn how to choose meaningful gifts and add a personal touch.</p>
+                    <span class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            <a href="/blog/romantic-birthday-gifts-for-your-wife.html" class="article-card">
+                <div class="article-header">
+                    <div class="episode-badge">Episode 7</div>
+                    <h3>Romantic Birthday Gifts for Your Wife</h3>
+                </div>
+                <div class="article-body">
+                    <div class="article-meta">
+                        <span><i class="fas fa-tag"></i> Birthday</span>
+                        <span><i class="far fa-clock"></i> 8 min read</span>
+                    </div>
+                    <p class="article-excerpt">Discover the best birthday gifts for wife that create lasting memories. Learn how to choose meaningful gifts and add a personal touch.</p>
+                    <span class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            <a href="/blog/best-fathers-day-presents-for-every-dad.html" class="article-card">
+                <div class="article-header">
+                    <div class="episode-badge">Episode 8</div>
+                    <h3>Best Fathers Day Presents for Every Dad</h3>
+                </div>
+                <div class="article-body">
+                    <div class="article-meta">
+                        <span><i class="fas fa-tag"></i> Fathers Day</span>
+                        <span><i class="far fa-clock"></i> 8 min read</span>
+                    </div>
+                    <p class="article-excerpt">Discover the best fathers day presents that create lasting memories. Learn how to choose meaningful gifts and add a personal touch.</p>
+                    <span class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            <a href="/blog/perfect-christmas-gifts-for-mum.html" class="article-card">
+                <div class="article-header">
+                    <div class="episode-badge">Episode 9</div>
+                    <h3>Perfect Christmas Gifts for Mum</h3>
+                </div>
+                <div class="article-body">
+                    <div class="article-meta">
+                        <span><i class="fas fa-tag"></i> Christmas</span>
+                        <span><i class="far fa-clock"></i> 8 min read</span>
+                    </div>
+                    <p class="article-excerpt">Discover the best christmas gifts for mum that create lasting memories. Learn how to choose meaningful gifts and add a personal touch.</p>
+                    <span class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            <a href="/blog/beautiful-wedding-anniversary-gift-ideas.html" class="article-card">
+                <div class="article-header">
+                    <div class="episode-badge">Episode 10</div>
+                    <h3>Beautiful Wedding Anniversary Gift Ideas</h3>
+                </div>
+                <div class="article-body">
+                    <div class="article-meta">
+                        <span><i class="fas fa-tag"></i> Anniversary</span>
+                        <span><i class="far fa-clock"></i> 8 min read</span>
+                    </div>
+                    <p class="article-excerpt">Discover the best wedding anniversary gifts that create lasting memories. Learn how to choose meaningful gifts and add a personal touch.</p>
+                    <span class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+        </div>
+    </div>
+</body>
+</html>
