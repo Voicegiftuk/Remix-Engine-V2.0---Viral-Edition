@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gift Guides by Location | SayPlay</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.3);
+        }
+        .logo {
+            font-size: 56px;
+            font-weight: 800;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .logo span { color: #FFD700; }
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            font-size: 42px;
+            margin-bottom: 15px;
+            font-weight: 900;
+        }
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            font-size: 20px;
+            margin-bottom: 50px;
+        }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 60px;
+            flex-wrap: wrap;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 48px;
+            font-weight: 800;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #718096;
+            font-size: 16px;
+            margin-top: 8px;
+        }
+        .city-section {
+            margin-bottom: 50px;
+        }
+        .city-title {
+            color: #667eea;
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 25px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #FFD700;
+        }
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .link-card {
+            background: #f7fafc;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: block;
+        }
+        .link-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+        }
+        .link-card h3 {
+            color: #2d3748;
+            font-size: 20px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .link-card p {
+            color: #718096;
+            font-size: 15px;
+            margin: 0;
+        }
+        @media (max-width: 768px) {
+            .container { padding: 30px 20px; }
+            .logo { font-size: 42px; }
+            h1 { font-size: 32px; }
+            .links-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Say<span>Play</span></div>
+        <h1><i class="fas fa-map-marker-alt"></i> Gift Guides by Location</h1>
+        <p class="subtitle">Find perfect personalized gifts in your city</p>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number">20</div>
+                <div class="stat-label">UK Cities</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">100</div>
+                <div class="stat-label">Gift Guides</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">5</div>
+                <div class="stat-label">Categories</div>
+            </div>
+        </div>
+
+        <div class="city-section">
+            <h2 class="city-title">Bath</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-bath.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Bath</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-bath.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Bath</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-bath.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Bath</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-bath.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Bath</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-bath.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Bath</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Belfast</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-belfast.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Belfast</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-belfast.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Belfast</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-belfast.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Belfast</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-belfast.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Belfast</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-belfast.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Belfast</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Birmingham</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-birmingham.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Birmingham</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-birmingham.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Birmingham</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-birmingham.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Birmingham</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-birmingham.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Birmingham</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-birmingham.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Birmingham</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Brighton</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-brighton.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Brighton</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-brighton.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Brighton</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-brighton.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Brighton</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-brighton.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Brighton</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-brighton.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Brighton</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Bristol</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-bristol.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Bristol</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-bristol.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Bristol</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-bristol.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Bristol</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-bristol.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Bristol</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-bristol.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Bristol</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Cambridge</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-cambridge.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Cambridge</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-cambridge.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Cambridge</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-cambridge.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Cambridge</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-cambridge.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Cambridge</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-cambridge.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Cambridge</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Cardiff</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-cardiff.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Cardiff</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-cardiff.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Cardiff</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-cardiff.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Cardiff</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-cardiff.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Cardiff</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-cardiff.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Cardiff</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Edinburgh</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-edinburgh.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Edinburgh</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-edinburgh.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Edinburgh</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-edinburgh.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Edinburgh</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-edinburgh.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Edinburgh</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-edinburgh.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Edinburgh</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Glasgow</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-glasgow.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Glasgow</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-glasgow.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Glasgow</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-glasgow.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Glasgow</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-glasgow.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Glasgow</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-glasgow.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Glasgow</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Leeds</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-leeds.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Leeds</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-leeds.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Leeds</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-leeds.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Leeds</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-leeds.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Leeds</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-leeds.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Leeds</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Leicester</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-leicester.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Leicester</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-leicester.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Leicester</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-leicester.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Leicester</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-leicester.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Leicester</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-leicester.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Leicester</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Liverpool</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-liverpool.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Liverpool</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-liverpool.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Liverpool</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-liverpool.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Liverpool</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-liverpool.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Liverpool</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-liverpool.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Liverpool</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">London</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-london.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in London</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-london.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in London</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-london.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in London</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-london.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in London</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-london.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in London</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Manchester</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-manchester.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Manchester</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-manchester.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Manchester</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-manchester.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Manchester</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-manchester.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Manchester</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-manchester.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Manchester</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Newcastle</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-newcastle.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Newcastle</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-newcastle.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Newcastle</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-newcastle.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Newcastle</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-newcastle.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Newcastle</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-newcastle.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Newcastle</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Nottingham</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-nottingham.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Nottingham</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-nottingham.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Nottingham</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-nottingham.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Nottingham</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-nottingham.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Nottingham</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-nottingham.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Nottingham</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Oxford</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-oxford.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Oxford</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-oxford.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Oxford</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-oxford.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Oxford</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-oxford.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Oxford</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-oxford.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Oxford</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Sheffield</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-sheffield.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Sheffield</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-sheffield.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Sheffield</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-sheffield.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Sheffield</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-sheffield.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Sheffield</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-sheffield.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Sheffield</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">Southampton</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-southampton.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in Southampton</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-southampton.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in Southampton</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-southampton.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in Southampton</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-southampton.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in Southampton</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-southampton.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in Southampton</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+        <div class="city-section">
+            <h2 class="city-title">York</h2>
+            <div class="links-grid">
+                <a href="/seo/anniversary-gifts-york.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Anniversary Gifts in York</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/birthday-gifts-york.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Birthday Gifts in York</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/christmas-gifts-york.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Christmas Gifts in York</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/mothers-day-gifts-york.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Mother's Day Gifts in York</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+                <a href="/seo/wedding-gifts-york.html" class="link-card">
+                    <h3><i class="fas fa-gift"></i> Wedding Gifts in York</h3>
+                    <p>Personalized voice message gifts</p>
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
